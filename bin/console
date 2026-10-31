@@ -1,0 +1,32 @@
+#!/usr/bin/env php
+<?php
+
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../src/Model/Model.php';
+require_once __DIR__ . '/../src/Model/Migracao.php';
+require_once __DIR__ . '/../src/Repository/MigrationRepository.php';
+require_once __DIR__ . '/../src/Console/CommandInterface.php';
+require_once __DIR__ . '/../src/Console/MigrarCommand.php';
+require_once __DIR__ . '/../src/Console/MigrateMakeCommand.php';
+require_once __DIR__ . '/../src/Console/MigrateListCommand.php';
+
+$argv = $_SERVER['argv'];
+$comandoRecebido = $argv[1] ?? null;
+
+$comandos = [
+    'migrate'       => new MigrarCommand(),
+    'migrate:make'  => new MigrateMakeCommand(),
+    'migrate:list'  => new MigrateListCommand(),
+];
+
+if (!$comandoRecebido || !isset($comandos[$comandoRecebido])) {
+    echo "\033[33m[AVISO] Comando não encontrado ou não informado.\033[0m\n";
+    echo "Comandos disponíveis:\n";
+    foreach ($comandos as $nome => $cmd) {
+        echo "  - php bin/console {$nome}\n";
+    }
+    exit(1);
+}
+
+$argumentosExtras = array_slice($argv, 2);
+$comandos[$comandoRecebido]->execute($argumentosExtras);
