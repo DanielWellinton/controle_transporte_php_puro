@@ -1,4 +1,5 @@
 <?php
+session_start();
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -6,35 +7,79 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/../src/Helpers/view.php';
 require_once __DIR__ . '/../config/Database.php';
 
-require_once __DIR__ . '/../src/Repository/MotoristaRepository.php';
-require_once __DIR__ . '/../src/Controller/MotoristaController.php';
+require_once __DIR__ . '/../src/Repositories/UsuarioRepository.php';
+require_once __DIR__ . '/../src/Controllers/AuthController.php';
+require_once __DIR__ . '/../src/Controllers/UsuarioController.php';
 
-require_once __DIR__ . '/../src/Repository/UsuarioRepository.php';
-require_once __DIR__ . '/../src/Controller/UsuarioController.php';
+require_once __DIR__ . '/../src/Repositories/MotoristaRepository.php';
+require_once __DIR__ . '/../src/Controllers/MotoristaController.php';
 
-require_once __DIR__ . '/../src/Repository/VeiculoRepository.php';
-require_once __DIR__ . '/../src/Controller/VeiculoController.php';
+require_once __DIR__ . '/../src/Repositories/VeiculoRepository.php';
+require_once __DIR__ . '/../src/Controllers/VeiculoController.php';
 
-require_once __DIR__ . '/../src/Repository/PontoDeParadaRepository.php';
-require_once __DIR__ . '/../src/Controller/PontoDeParadaController.php';
+require_once __DIR__ . '/../src/Repositories/PontoDeParadaRepository.php';
+require_once __DIR__ . '/../src/Controllers/PontoDeParadaController.php';
 
-require_once __DIR__ . '/../src/Repository/RotaRepository.php';
-require_once __DIR__ . '/../src/Controller/RotaController.php';
+require_once __DIR__ . '/../src/Repositories/RotaRepository.php';
+require_once __DIR__ . '/../src/Controllers/RotaController.php';
 
-require_once __DIR__ . '/../src/Repository/ViagemRepository.php';
-require_once __DIR__ . '/../src/Controller/ViagemController.php';
+require_once __DIR__ . '/../src/Repositories/ViagemRepository.php';
+require_once __DIR__ . '/../src/Controllers/ViagemController.php';
 
-require_once __DIR__ . '/../src/Repository/PortalMotoristaRepository.php';
-require_once __DIR__ . '/../src/Controller/PortalMotoristaController.php';
+require_once __DIR__ . '/../src/Repositories/PortalMotoristaRepository.php';
+require_once __DIR__ . '/../src/Controllers/PortalMotoristaController.php';
 
-require_once __DIR__ . '/../src/Repository/PassageiroRepository.php';
-require_once __DIR__ . '/../src/Controller/PassageiroController.php';
+require_once __DIR__ . '/../src/Repositories/PassageiroRepository.php';
+require_once __DIR__ . '/../src/Controllers/PassageiroController.php';
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uri = rtrim($uri, '/');
 if ($uri === '') $uri = '/';
 
 switch ($uri) {
+
+    // --- ROTAS DE AUTH ---
+    case '/login':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            (new AuthController())->login();
+        } else {
+            (new AuthController())->showLogin();
+        }
+        break;
+    case '/register':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            (new AuthController())->register();
+        } else {
+            (new AuthController())->showRegister();
+        }
+        break;
+    case '/logout':
+        (new AuthController())->logout();
+        break;
+
+    // --- ROTAS DE USUÁRIOS ---
+    case '/usuarios':
+        (new UsuarioController())->index();
+        break;
+    case '/usuarios/create':
+        (new UsuarioController())->create();
+        break;
+    case '/usuarios/store':
+        (new UsuarioController())->store();
+        break;
+    case '/usuarios/edit':
+        (new UsuarioController())->edit();
+        break;
+    case '/usuarios/update':
+        (new UsuarioController())->update();
+        break;
+    case '/usuarios/delete':
+        (new UsuarioController())->destroy();
+        break;
+    case '/usuarios/autocomplete':
+        (new UsuarioController())->autocomplete();
+        break;
+
     // --- ROTAS DE MOTORISTAS ---
     case '/motoristas':
         (new MotoristaController())->index();
@@ -59,29 +104,6 @@ switch ($uri) {
         break;
     case '/motoristas/autocomplete':
         (new MotoristaController())->autocomplete();
-        break;
-
-    // --- ROTAS DE USUÁRIOS ---
-    case '/usuarios':
-        (new UsuarioController())->index();
-        break;
-    case '/usuarios/create':
-        (new UsuarioController())->create();
-        break;
-    case '/usuarios/store':
-        (new UsuarioController())->store();
-        break;
-    case '/usuarios/edit':
-        (new UsuarioController())->edit();
-        break;
-    case '/usuarios/update':
-        (new UsuarioController())->update();
-        break;
-    case '/usuarios/delete':
-        (new UsuarioController())->destroy();
-        break;
-    case '/usuarios/autocomplete':
-        (new UsuarioController())->autocomplete();
         break;
     
     // --- ROTAS DE VEICULOS ---

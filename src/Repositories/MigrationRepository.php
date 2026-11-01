@@ -95,4 +95,16 @@ class MigracaoRepository
             throw new \Exception("Erro ao executar script: " . $e->getMessage());
         }
     }
+
+    public function criarTabelaSeNaoExistir(): void
+    {
+        $sql = "CREATE TABLE IF NOT EXISTS migracao (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            descricao VARCHAR(255) NOT NULL UNIQUE,
+            ativo TINYINT(1) NOT NULL DEFAULT 1,
+            criado_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+        
+        $this->pdo->exec($sql);
+    }
 }

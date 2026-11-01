@@ -19,7 +19,7 @@ class PassageiroRepository
         $params = [];
 
         if (!empty($search)) {
-            $whereClauses[] = "(r.descricao LIKE :search OR u_mot.name LIKE :search OR v.descricao LIKE :search OR v.placa LIKE :search)";
+            $whereClauses[] = "(r.descricao LIKE :search OR u_mot.nome LIKE :search OR v.descricao LIKE :search OR v.placa LIKE :search)";
             $params['search'] = "%{$search}%";
         }
 
@@ -61,7 +61,7 @@ class PassageiroRepository
         // Busca paginada
         $sql = "SELECT viagem.*, 
                        r.descricao as rota_descricao, 
-                       u_mot.name as motorista_nome, 
+                       u_mot.nome as motorista_nome, 
                        v.descricao as veiculo_descricao, 
                        v.placa as veiculo_placa
                 {$sqlBase}
@@ -98,7 +98,7 @@ class PassageiroRepository
     {
         $sql = "SELECT viagem.*, 
                        r.descricao as rota_descricao, 
-                       u_mot.name as motorista_nome, 
+                       u_mot.nome as motorista_nome, 
                        v.descricao as veiculo_descricao, 
                        v.placa as veiculo_placa
                 FROM viagem viagem
@@ -184,7 +184,7 @@ class PassageiroRepository
         $params = ['user_id' => $userId];
 
         if (!empty($search)) {
-            $whereClauses[] = "(r.descricao LIKE :search OR u_mot.name LIKE :search OR v.descricao LIKE :search OR v.placa LIKE :search)";
+            $whereClauses[] = "(r.descricao LIKE :search OR u_mot.nome LIKE :search OR v.descricao LIKE :search OR v.placa LIKE :search)";
             $params['search'] = "%{$search}%";
         }
 
@@ -225,7 +225,7 @@ class PassageiroRepository
         // Busca paginada
         $sql = "SELECT viagem.*, 
                        r.descricao as rota_descricao, 
-                       u_mot.name as motorista_nome, 
+                       u_mot.nome as motorista_nome, 
                        v.descricao as veiculo_descricao, 
                        v.placa as veiculo_placa
                 {$sqlBase}
