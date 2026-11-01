@@ -113,8 +113,31 @@ class AuthController
             'data_nascimento' => $dataNascimento
         ];
 
-        // Regista por padrão sem papel específico ou atribui um papel padrão se necessário
         $this->usuarioRepository->create($dados);
+        $usuarioCadastrado = $this->usuarioRepository->findByEmail($email);
+        $novoUsuarioId = $usuarioCadastrado['id'] ?? null;
+
+        if ($novoUsuarioId) {
+            try {
+                $pdo = Database::conectar();
+
+                $stmtPapel = $pdo->prepare("SELECT id FROM papel WHERE descricao = 'Passageiro' LIMIT 1");
+                $stmtPapel->execute();
+                $papelPassageiro = $stmtPapel->fetch(PDO::FETCH_ASSOC);
+
+                if ($papelPassageiro) {
+                    $papelId = $papelPassageiro['id'];
+
+                    $stmtPivot = $pdo->prepare("
+                        INSERT INTO usuario_papeis (usuario_id, papel_id, ativo, data_hora_inicio) 
+                        VALUES (?, ?, 1, NOW())
+                    ");
+                    $stmtPivot->execute([$novoUsuarioId, $papelId]);
+                }
+            } catch (Exception $e) {
+                error_log("Erro ao atribuir papel padrão de passageiro: " . $e->getMessage());
+            }
+        }
 
         $_SESSION['success'] = 'Conta criada com sucesso! Faça login para continuar.';
         header('Location: /login');

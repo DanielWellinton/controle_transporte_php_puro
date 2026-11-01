@@ -12,7 +12,7 @@ class RoleMiddleware
         // Garante que está autenticado primeiro
         AuthMiddleware::handle();
 
-        $usuarioId = $_SESSION['usuario']['id'] ?? 0;
+        $usuarioId = $_SESSION['usuario_id'] ?? 0;
         
         if (empty($usuarioId)) {
             header('Location: /login');
@@ -44,15 +44,23 @@ class RoleMiddleware
             $temPermissao = (int) $stmt->fetchColumn() > 0;
 
             if (!$temPermissao) {
-                $_SESSION['error'] = 'Acesso não autorizado para o seu perfil.';
-                header('Location: /dashboard'); // Redireciona para o painel padrão ou 403
+                // Define o código HTTP como 403 Forbidden
+                http_response_code(403);
+
+                // Se a requisição veio via Fetch/AJAX, retorna JSON
+                if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Acesso não autorizado para o seu perfil.']);
+                    exit;
+                }
+
+                view('errors.403', [], "layouts/auth");
                 exit;
             }
 
         } catch (Exception $e) {
-            error_log("Erro ao verificar papéis: " . $e->getMessage());
             $_SESSION['error'] = 'Erro interno ao validar permissões.';
-            header('Location: /dashboard');
+            view('errors.403', [], "layouts/auth");
             exit;
         }
     }
