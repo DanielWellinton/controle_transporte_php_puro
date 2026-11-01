@@ -11,7 +11,6 @@ class MigrateListCommand implements CommandInterface
     {
         try {
             $pdo = Database::conectar();
-            $repo = new MigracaoRepository($pdo);
 
             $pastaMigrations = __DIR__ . '/../../database/migrations';
             if (!is_dir($pastaMigrations)) {

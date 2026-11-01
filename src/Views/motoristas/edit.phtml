@@ -1,0 +1,211 @@
+<?php 
+$title = 'Editar Motorista';
+$headerTitle = 'Editar Motorista';
+
+// Extrair de forma segura as variáveis passadas pelo Controller
+$idMotorista = $motorista['id'] ?? '';
+$cnhAtual = $motorista['cnh'] ?? '';
+$dataValidadeCnh = isset($motorista['data_validade_cnh']) ? date('Y-m-d', strtotime($motorista['data_validade_cnh'])) : '';
+$ativoAtual = (bool) ($motorista['ativo'] ?? true);
+$usuarioIdAtual = $motorista['usuario_id'] ?? '';
+
+// Montar o nome e e-mail do usuário se vier vinculado na consulta
+$nomeUsuarioVinculado = $motorista['usuario_nome'] ?? $motorista['usuario']['name'] ?? '';
+$emailUsuarioVinculado = $motorista['usuario_email'] ?? $motorista['usuario']['email'] ?? '';
+$textoUsuarioBusca = !empty($nomeUsuarioVinculado) ? "{$nomeUsuarioVinculado} ({$emailUsuarioVinculado})" : '';
+?>
+
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <!-- Card Principal do Form -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        
+        <!-- Header do Form -->
+        <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <div>
+                <h3 class="text-base font-bold text-slate-800">Alterar Informações</h3>
+                <p class="text-xs text-slate-500">Atualize os dados de CNH e vínculos do motorista.</p>
+            </div>
+            <a href="/motoristas" class="text-xs font-semibold text-slate-500 hover:text-slate-800 transition">
+                &larr; Voltar para a lista
+            </a>
+        </div>
+
+        <form action="/motoristas/update?id=<?= $idMotorista ?>" method="POST" class="p-6 space-y-5">
+            
+            <!-- Usuário (Autocomplete) -->
+            <div class="relative" id="usuario-autocomplete-wrapper">
+                <label for="usuario_search" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Usuário do Sistema</label>
+                
+                <!-- Input Oculto enviado ao backend (ID do usuário selecionado) -->
+                <input type="hidden" name="usuario_id" id="usuario_id" value="<?= htmlspecialchars($usuarioIdAtual) ?>">
+                
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="usuario_search" 
+                        value="<?= htmlspecialchars($textoUsuarioBusca) ?>" 
+                        placeholder="Digite para buscar o usuário por nome ou e-mail..." 
+                        autocomplete="off"
+                        class="w-full rounded-xl border border-slate-200 bg-slate-50/50 text-slate-800 text-sm focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors shadow-sm pr-9 py-2.5 px-3"
+                    />
+
+                    <!-- Campo oculto para reter o nome exibido caso retorne erro -->
+                    <input type="hidden" name="usuario_nome" id="usuario_nome_hidden" value="<?= htmlspecialchars($textoUsuarioBusca) ?>">
+
+                    <!-- Botão para Limpar Seleção -->
+                    <button type="button" id="btn-clear-usuario" class="<?= !empty($usuarioIdAtual) ? '' : 'hidden' ?> absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Dropdown de Resultados do Autocomplete -->
+                <div id="usuario-autocomplete-results" class="hidden absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto divide-y divide-slate-100">
+                </div>
+            </div>
+
+            <!-- Grid com CNH e Validade -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                
+                <!-- CNH -->
+                <div>
+                    <label for="cnh" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Número da CNH</label>
+                    <input 
+                        id="cnh" 
+                        class="w-full rounded-xl border border-slate-200 bg-slate-50/50 text-slate-800 text-sm focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors shadow-sm font-mono py-2.5 px-3" 
+                        type="text" 
+                        name="cnh" 
+                        value="<?= htmlspecialchars($cnhAtual) ?>" 
+                        required 
+                    />
+                </div>
+
+                <!-- Validade CNH -->
+                <div>
+                    <label for="data_validade_cnh" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Data de Validade da CNH</label>
+                    <input 
+                        id="data_validade_cnh" 
+                        class="w-full rounded-xl border border-slate-200 bg-slate-50/50 text-slate-800 text-sm focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors shadow-sm py-2.5 px-3" 
+                        type="date" 
+                        name="data_validade_cnh" 
+                        value="<?= htmlspecialchars($dataValidadeCnh) ?>" 
+                        required 
+                    />
+                </div>
+
+            </div>
+
+            <!-- Toggle Ativo / Inativo -->
+            <div class="pt-2">
+                <label for="ativo" class="inline-flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/80 transition w-full sm:w-auto">
+                    <input 
+                        id="ativo" 
+                        type="checkbox" 
+                        class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 shadow-sm" 
+                        name="ativo" 
+                        value="1" 
+                        <?= $ativoAtual ? 'checked' : '' ?>
+                    >
+                    <span class="text-xs font-semibold text-slate-700">Motorista Ativo no Sistema</span>
+                </label>
+            </div>
+
+            <!-- Footer do Formulário com Botões de Ação -->
+            <div class="pt-6 border-t border-slate-100 flex items-center justify-end gap-3">
+                <a href="/motoristas" class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold text-xs transition">
+                    Cancelar
+                </a>
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition shadow-md shadow-indigo-500/20">
+                    Atualizar Motorista
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+
+<!-- Script Autocomplete do Usuário -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('usuario_search');
+    const hiddenIdInput = document.getElementById('usuario_id');
+    const hiddenNameInput = document.getElementById('usuario_nome_hidden');
+    const resultsContainer = document.getElementById('usuario-autocomplete-results');
+    const clearBtn = document.getElementById('btn-clear-usuario');
+    let debounceTimer;
+
+    searchInput.addEventListener('input', function () {
+        const query = this.value.trim();
+        hiddenNameInput.value = query;
+
+        if (query === '') {
+            hiddenIdInput.value = '';
+            clearBtn.classList.add('hidden');
+        } else {
+            clearBtn.classList.remove('hidden');
+        }
+
+        if (query.length < 2) {
+            resultsContainer.classList.add('hidden');
+            resultsContainer.innerHTML = '';
+            return;
+        }
+
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            fetch(`/usuarios/autocomplete?q=${encodeURIComponent(query)}&current_usuario_id=<?= $usuarioIdAtual ?>`)
+                .then(response => response.json())
+                .then(data => {
+                    resultsContainer.innerHTML = '';
+
+                    if (data.length === 0) {
+                        resultsContainer.innerHTML = `
+                            <div class="p-3 text-xs text-slate-400 text-center">
+                                Nenhum usuário encontrado.
+                            </div>`;
+                    } else {
+                        data.forEach(item => {
+                            const option = document.createElement('div');
+                            option.className = 'p-3 hover:bg-indigo-50 cursor-pointer transition flex flex-col gap-0.5 text-xs text-slate-700';
+                            option.innerHTML = `
+                                <span class="font-bold text-slate-800">${item.name}</span>
+                                <span class="text-slate-400 text-[11px]">${item.email}</span>
+                            `;
+
+                            option.addEventListener('click', function () {
+                                const label = `${item.name} (${item.email})`;
+                                searchInput.value = label;
+                                hiddenIdInput.value = item.id;
+                                hiddenNameInput.value = label;
+                                resultsContainer.classList.add('hidden');
+                                clearBtn.classList.remove('hidden');
+                            });
+
+                            resultsContainer.appendChild(option);
+                        });
+                    }
+
+                    resultsContainer.classList.remove('hidden');
+                })
+                .catch(err => console.error('Erro ao realizar busca de usuários:', err));
+        }, 300);
+    });
+
+    clearBtn.addEventListener('click', function () {
+        searchInput.value = '';
+        hiddenIdInput.value = '';
+        hiddenNameInput.value = '';
+        resultsContainer.classList.add('hidden');
+        clearBtn.classList.add('hidden');
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!document.getElementById('usuario-autocomplete-wrapper').contains(e.target)) {
+            resultsContainer.classList.add('hidden');
+        }
+    });
+});
+</script>
