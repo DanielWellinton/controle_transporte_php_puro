@@ -1,0 +1,207 @@
+<?php 
+$title = 'Meu Histórico de Viagens';
+$headerTitle = 'Meu Histórico de Viagens';
+
+// Usuário autenticado na sessão
+$usuarioLogadoId = $_SESSION['usuario']['id'] ?? 0;
+
+// Extração segura dos dados retornados pelo PassageiroRepository->paginateHistorico()
+$listaHistorico = $viagens['data'] ?? [];
+$totalRegistros = $viagens['total'] ?? count($listaHistorico);
+$paginaAtual = $viagens['pagina'] ?? 1;
+$limitePorPagina = $viagens['limite'] ?? 10;
+$totalPaginas = ceil($totalRegistros / $limitePorPagina);
+
+$searchQuery = $_GET['search'] ?? '';
+$dataInicioQuery = $_GET['data_inicio'] ?? '';
+$dataFimQuery = $_GET['data_fim'] ?? '';
+
+$temFiltros = !empty($searchQuery) || !empty($dataInicioQuery) || !empty($dataFimQuery);
+
+/**
+ * Helper para formatação de data/hora no padrão brasileiro
+ */
+function formatarDataHoraHistoricoPassageiro(?string $dataHora): string {
+    if (empty($dataHora)) return '-';
+    $timestamp = strtotime($dataHora);
+    return $timestamp ? date('d/m/Y H:i', $timestamp) : '-';
+}
+?>
+
+<div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- Card de Cabeçalho / Botão para voltar -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-base font-bold text-slate-800">Histórico de Viagens Encerradas</h2>
+            <p class="text-xs text-slate-500 mt-1">Consulte o registro das viagens que você realizou ou esteve inscrito.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="/dashboard" 
+               class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl transition shadow-md shadow-indigo-500/20">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span>Voltar às Viagens Ativas</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Barra de Filtros -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <form method="GET" action="/passageiros/historico" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+            
+            <!-- Campo Busca (Rota, Motorista ou Veículo) -->
+            <div class="sm:col-span-12 lg:col-span-6">
+                <label for="search" class="block text-xs font-semibold text-slate-600 mb-1">Buscar</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </span>
+                    <input type="text" name="search" id="search" value="<?= htmlspecialchars($searchQuery) ?>" placeholder="Buscar por rota, motorista ou veículo..." 
+                           class="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition text-slate-800 placeholder-slate-400">
+                </div>
+            </div>
+
+            <!-- Filtro por Data Inicial -->
+            <div class="sm:col-span-6 lg:col-span-2">
+                <label for="data_inicio" class="block text-xs font-semibold text-slate-600 mb-1">Data Início</label>
+                <input type="date" name="data_inicio" id="data_inicio" value="<?= htmlspecialchars($dataInicioQuery) ?>" 
+                       class="w-full py-2 px-3 text-xs rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition text-slate-800">
+            </div>
+
+            <!-- Filtro por Data Fim -->
+            <div class="sm:col-span-6 lg:col-span-2">
+                <label for="data_fim" class="block text-xs font-semibold text-slate-600 mb-1">Data Fim</label>
+                <input type="date" name="data_fim" id="data_fim" value="<?= htmlspecialchars($dataFimQuery) ?>" 
+                       class="w-full py-2 px-3 text-xs rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition text-slate-800">
+            </div>
+
+            <!-- Botões de Ação do Filtro -->
+            <div class="sm:col-span-12 lg:col-span-2 flex items-center gap-2">
+                <button type="submit" class="w-full py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                    </svg>
+                    <span>Filtrar</span>
+                </button>
+                
+                <?php if($temFiltros): ?>
+                    <a href="/passageiros/historico" class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs rounded-xl transition flex items-center justify-center">
+                        Limpar
+                    </a>
+                <?php endif; ?>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- Lista de Viagens Encerradas -->
+    <?php if(empty($listaHistorico)): ?>
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center">
+            <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <h3 class="text-sm font-bold text-slate-800">
+                <?php if($temFiltros): ?>
+                    Nenhuma viagem encontrada
+                <?php else: ?>
+                    Nenhum histórico disponível
+                <?php endif; ?>
+            </h3>
+            <p class="text-xs text-slate-500 mt-1">
+                <?php if($temFiltros): ?>
+                    Tente ajustar os filtros aplicados.
+                <?php else: ?>
+                    Você não possui viagens encerradas registradas até o momento.
+                <?php endif; ?>
+            </p>
+        </div>
+    <?php else: ?>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <?php foreach($listaHistorico as $viagemFinalizada): 
+                $rotaDescricao = $viagemFinalizada['rota_descricao'] ?? 'Rota não informada';
+                $motoristaNome = $viagemFinalizada['motorista_nome'] ?? 'A definir';
+                $veiculoDescricao = $viagemFinalizada['veiculo_descricao'] ?? 'N/A';
+                $veiculoPlaca = $viagemFinalizada['veiculo_placa'] ?? '-';
+                $dataSaida = formatarDataHoraHistoricoPassageiro($viagemFinalizada['data_hora_saida'] ?? null);
+                $dataChegada = formatarDataHoraHistoricoPassageiro($viagemFinalizada['data_hora_chegada'] ?? null);
+
+                // Verifica embarque do usuário logado nesta viagem
+                $embarqueConfirmado = false;
+                if (!empty($viagemFinalizada['passageiros'])) {
+                    foreach ($viagemFinalizada['passageiros'] as $p) {
+                        if ((int)$p['id'] === (int)$usuarioLogadoId && !empty($p['pivot_data_hora_saida'])) {
+                            $embarqueConfirmado = true;
+                            break;
+                        }
+                    }
+                }
+            ?>
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between overflow-hidden opacity-95 hover:opacity-100 transition">
+                    <div class="p-6">
+                        <!-- Badges de Status -->
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                                Encerrada
+                            </span>
+                            <?php if($embarqueConfirmado): ?>
+                                <span class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                                    Embarque Confirmado
+                                </span>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Título da Rota -->
+                        <h4 class="text-base font-bold text-slate-800 mb-1">
+                            <?= htmlspecialchars($rotaDescricao) ?>
+                        </h4>
+
+                        <!-- Datas de Saída e Chegada -->
+                        <div class="space-y-1 mb-4 text-xs font-semibold text-slate-500">
+                            <p>Saída: <span class="text-slate-700"><?= $dataSaida ?></span></p>
+                            <p>Chegada: <span class="text-slate-700"><?= $dataChegada ?></span></p>
+                        </div>
+
+                        <!-- Detalhes do Transporte -->
+                        <div class="space-y-2.5 border-t border-slate-100 pt-4 text-xs text-slate-600">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                <span>Motorista: <strong class="text-slate-800"><?= htmlspecialchars($motoristaNome) ?></strong></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                </svg>
+                                <span>Veículo: <strong class="text-slate-800"><?= htmlspecialchars($veiculoDescricao) ?> (<?= htmlspecialchars($veiculoPlaca) ?>)</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- Paginação -->
+        <?php if($totalPaginas > 1): ?>
+            <div class="px-6 py-4 border border-slate-200 rounded-2xl bg-white shadow-sm flex items-center justify-between text-xs text-slate-600 mt-6">
+                <span>Mostrando página <strong><?= $paginaAtual ?></strong> de <strong><?= $totalPaginas ?></strong> (Total de <?= $totalRegistros ?> registos)</span>
+                <div class="flex gap-1">
+                    <?php if($paginaAtual > 1): ?>
+                        <a href="?page=<?= $paginaAtual - 1 ?>&search=<?= urlencode($searchQuery) ?>&data_inicio=<?= urlencode($dataInicioQuery) ?>&data_fim=<?= urlencode($dataFimQuery) ?>" class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 font-medium">Anterior</a>
+                    <?php endif; ?>
+                    
+                    <?php if($paginaAtual < $totalPaginas): ?>
+                        <a href="?page=<?= $paginaAtual + 1 ?>&search=<?= urlencode($searchQuery) ?>&data_inicio=<?= urlencode($dataInicioQuery) ?>&data_fim=<?= urlencode($dataFimQuery) ?>" class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 font-medium">Próxima</a>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
+
+</div>

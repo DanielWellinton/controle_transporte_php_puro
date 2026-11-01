@@ -132,7 +132,7 @@ class MotoristaController
 
         $dados = array_map(fn($m) => [
             'id' => $m['id'],
-            'name' => $m['nome'] ?? "Motorista #{$m['id']}",
+            'nome' => $m['nome'] ?? "Motorista #{$m['id']}",
             'email' => $m['email'] ?? ''
         ], $motoristas);
 

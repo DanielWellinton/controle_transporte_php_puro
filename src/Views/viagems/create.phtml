@@ -1,0 +1,288 @@
+<?php 
+$isDuplication = isset($viagem) && !empty($viagem);
+$title = $isDuplication ? 'Duplicar Viagem' : 'Agendar Viagem';
+$headerTitle = $isDuplication ? 'Duplicar Viagem Existente' : 'Agendar Nova Viagem';
+
+// Valores antigos/existentes
+$rotaId = $_POST['rota_id'] ?? ($viagem['rota_id'] ?? '');
+$rotaNome = $_POST['rota_nome'] ?? ($viagem['rota_descricao'] ?? '');
+
+$motoristaId = $_POST['motorista_id'] ?? ($viagem['motorista_id'] ?? '');
+$motoristaNome = $_POST['motorista_nome'] ?? ($viagem['motorista_nome'] ?? '');
+
+$veiculoId = $_POST['veiculo_id'] ?? ($viagem['veiculo_id'] ?? '');
+$veiculoNome = $_POST['veiculo_nome'] ?? (isset($viagem['veiculo_descricao']) ? $viagem['veiculo_descricao'] . ' (' . ($viagem['veiculo_placa'] ?? '') . ')' : '');
+
+// Formatação das datas para input datetime-local (Y-m-d\TH:i)
+$valSaida = $_POST['data_hora_saida'] ?? '';
+if (empty($valSaida) && !empty($viagem['data_hora_saida'])) {
+    $timestamp = strtotime($viagem['data_hora_saida']);
+    $valSaida = $timestamp ? date('Y-m-d\TH:i', $timestamp) : '';
+}
+
+$valChegada = $_POST['data_hora_chegada'] ?? '';
+if (empty($valChegada) && !empty($viagem['data_hora_chegada'])) {
+    $timestamp = strtotime($viagem['data_hora_chegada']);
+    $valChegada = $timestamp ? date('Y-m-d\TH:i', $timestamp) : '';
+}
+
+$ativo = isset($_POST['ativo']) ? (bool)$_POST['ativo'] : (!isset($viagem) || !empty($viagem['ativo']));
+?>
+
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <!-- Card de Cabeçalho / Ações -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-3">
+                <a href="/viagens" class="text-xs font-semibold text-slate-500 hover:text-slate-800 transition">
+                    &larr; Voltar para Viagens
+                </a>
+            </div>
+            <h2 class="text-base font-bold text-slate-800 mt-1">
+                <?= $isDuplication ? 'Duplicar Viagem' : 'Agendar Nova Viagem' ?>
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">
+                <?= $isDuplication ? 'Ajuste os dados conforme necessário para criar a nova viagem com base na selecionada.' : 'Preencha os dados operacionais para cadastrar o manifesto da viagem.' ?>
+            </p>
+        </div>
+    </div>
+
+    <!-- Mensagem de Erro Geral -->
+    <?php if(isset($_SESSION['error'])): ?>
+        <div class="p-4 rounded-xl text-xs font-semibold text-rose-800 bg-rose-50 border border-rose-200 space-y-1">
+            <p class="font-bold text-sm">Atenção:</p>
+            <p><?= htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?></p>
+        </div>
+    <?php endif; ?>
+
+    <!-- Formulário Principal -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        <form action="/viagens/store" method="POST" class="space-y-6">
+
+            <!-- Autocomplete: Rota -->
+            <div class="relative autocomplete-container" 
+                 data-url="/rotas/autocomplete"
+                 data-label-key="descricao">
+                <label for="search_rota" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                    Rota <span class="text-rose-500">*</span>
+                </label>
+                
+                <input type="hidden" name="rota_id" class="autocomplete-id" 
+                       value="<?= htmlspecialchars($rotaId) ?>" required>
+
+                <div class="relative">
+                    <input type="text" id="search_rota" class="autocomplete-search w-full text-xs font-medium text-slate-800 bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 pr-10 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition"
+                        placeholder="Digite para buscar a rota..."
+                        value="<?= htmlspecialchars($rotaNome) ?>"
+                        autocomplete="off">
+
+                    <button type="button" class="autocomplete-clear hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+                        &times;
+                    </button>
+                </div>
+
+                <!-- Lista de Resultados -->
+                <div class="autocomplete-results hidden absolute z-30 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-slate-100"></div>
+            </div>
+
+            <!-- Grid: Motorista e Veículo -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- Autocomplete: Motorista -->
+                <div class="relative autocomplete-container" 
+                     data-url="/motoristas/autocomplete"
+                     data-label-key="nome">
+                    <label for="search_motorista" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                        Motorista <span class="text-rose-500">*</span>
+                    </label>
+
+                    <input type="hidden" name="motorista_id" class="autocomplete-id" 
+                           value="<?= htmlspecialchars($motoristaId) ?>" required>
+
+                    <div class="relative">
+                        <input type="text" id="search_motorista" class="autocomplete-search w-full text-xs font-medium text-slate-800 bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 pr-10 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition"
+                            placeholder="Digite o nome do motorista..."
+                            value="<?= htmlspecialchars($motoristaNome) ?>"
+                            autocomplete="off">
+
+                        <button type="button" class="autocomplete-clear hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+                            &times;
+                        </button>
+                    </div>
+
+                    <div class="autocomplete-results hidden absolute z-30 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-slate-100"></div>
+                </div>
+
+                <!-- Autocomplete: Veículo -->
+                <div class="relative autocomplete-container" 
+                     data-url="/veiculos/autocomplete"
+                     data-label-key="descricao"
+                     data-sublabel-key="placa">
+                    <label for="search_veiculo" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                        Veículo <span class="text-rose-500">*</span>
+                    </label>
+
+                    <input type="hidden" name="veiculo_id" class="autocomplete-id" 
+                           value="<?= htmlspecialchars($veiculoId) ?>" required>
+
+                    <div class="relative">
+                        <input type="text" id="search_veiculo" class="autocomplete-search w-full text-xs font-medium text-slate-800 bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 pr-10 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition"
+                            placeholder="Buscar por nome ou placa..."
+                            value="<?= htmlspecialchars($veiculoNome) ?>"
+                            autocomplete="off">
+
+                        <button type="button" class="autocomplete-clear hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+                            &times;
+                        </button>
+                    </div>
+
+                    <div class="autocomplete-results hidden absolute z-30 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-slate-100"></div>
+                </div>
+            </div>
+
+            <!-- Grid: Saída e Chegada -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Data/Hora Saída -->
+                <div>
+                    <label for="data_hora_saida" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                        Data e Hora de Saída <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="datetime-local" id="data_hora_saida" name="data_hora_saida" 
+                        value="<?= htmlspecialchars($valSaida) ?>" required
+                        class="w-full text-xs font-medium text-slate-800 bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition" />
+                </div>
+
+                <!-- Data/Hora Chegada -->
+                <div>
+                    <label for="data_hora_chegada" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                        Data e Hora de Chegada (Prevista)
+                    </label>
+                    <input type="datetime-local" id="data_hora_chegada" name="data_hora_chegada" 
+                        value="<?= htmlspecialchars($valChegada) ?>"
+                        class="w-full text-xs font-medium text-slate-800 bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition" />
+                </div>
+            </div>
+
+            <!-- Status Ativo/Inativo -->
+            <div class="pt-2">
+                <label class="inline-flex items-center gap-3 cursor-pointer group">
+                    <input type="checkbox" id="ativo" name="ativo" value="1" 
+                        <?= $ativo ? 'checked' : '' ?>
+                        class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/20 focus:ring-2 transition cursor-pointer">
+                    <span class="text-xs font-medium text-slate-700 group-hover:text-slate-900 transition">
+                        Viagem Ativa (Disponível para embarque / check-in)
+                    </span>
+                </label>
+            </div>
+
+            <!-- Botões de Ação -->
+            <div class="pt-6 border-t border-slate-100 flex items-center justify-end gap-3">
+                <a href="/viagens" 
+                    class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition">
+                    Cancelar
+                </a>
+                <button type="submit" 
+                    class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl transition shadow-md shadow-indigo-500/20">
+                    Salvar Viagem
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<!-- Script Vanilla Reutilizável de Autocomplete -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const containers = document.querySelectorAll('.autocomplete-container');
+
+    containers.forEach(container => {
+        const url = container.dataset.url;
+        const labelKey = container.dataset.labelKey;
+        const sublabelKey = container.dataset.sublabelKey;
+
+        const searchInput = container.querySelector('.autocomplete-search');
+        const hiddenIdInput = container.querySelector('.autocomplete-id');
+        const resultsContainer = container.querySelector('.autocomplete-results');
+        const clearBtn = container.querySelector('.autocomplete-clear');
+
+        let debounceTimer = null;
+
+        if (searchInput.value.trim() !== '') {
+            clearBtn.classList.remove('hidden');
+        }
+
+        searchInput.addEventListener('input', function () {
+            const query = this.value.trim();
+            hiddenIdInput.value = '';
+
+            if (query.length > 0) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+                resultsContainer.classList.add('hidden');
+                return;
+            }
+
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fetch(`${url}?q=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    resultsContainer.innerHTML = '';
+
+                    if (!Array.isArray(data) || data.length === 0) {
+                        resultsContainer.innerHTML = `
+                            <div class="p-3 text-xs text-slate-400 text-center">
+                                Nenhum resultado encontrado.
+                            </div>`;
+                    } else {
+                        data.forEach(item => {
+                            const option = document.createElement('div');
+                            option.className = 'p-3 hover:bg-indigo-50 cursor-pointer transition flex flex-col gap-0.5 text-xs text-slate-700';
+
+                            const primaryText = item[labelKey] ?? '';
+                            const secondaryText = sublabelKey && item[sublabelKey] ? ` (${item[sublabelKey]})` : '';
+
+                            option.innerHTML = `
+                                <span class="font-bold text-slate-800">${primaryText}${secondaryText}</span>
+                            `;
+
+                            option.addEventListener('click', function () {
+                                searchInput.value = `${primaryText}${secondaryText}`;
+                                hiddenIdInput.value = item.id;
+                                resultsContainer.classList.add('hidden');
+                            });
+
+                            resultsContainer.appendChild(option);
+                        });
+                    }
+
+                    resultsContainer.classList.remove('hidden');
+                })
+                .catch(err => console.error('Erro na requisição de autocomplete:', err));
+            }, 300);
+        });
+
+        clearBtn.addEventListener('click', function () {
+            searchInput.value = '';
+            hiddenIdInput.value = '';
+            resultsContainer.classList.add('hidden');
+            clearBtn.classList.add('hidden');
+            searchInput.focus();
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!container.contains(e.target)) {
+                resultsContainer.classList.add('hidden');
+            }
+        });
+    });
+});
+</script>

@@ -3,9 +3,9 @@
 class Viagem extends Model
 {
     private int $id;
-    private string $qrcode;
+    private string $codigoQr;
     private DateTime $dataHoraSaida;
-    private DateTime $dataHoraChegada;
+    private ?DateTime $dataHoraChegada;
     private Rota $rota;
     private Motorista $motorista;
     private Veiculo $veiculo;
@@ -21,14 +21,14 @@ class Viagem extends Model
         $this->id = $id;
     }
 
-    public function getQrcode(): string
+    public function getCodigoQr(): string
     {
-        return $this->qrcode;
+        return $this->codigoQr;
     }
 
-    public function setQrcode(string $qrcode): void
+    public function setCodigoQr(string $codigoQr): void
     {
-        $this->qrcode = $qrcode;
+        $this->codigoQr = $codigoQr;
     }
 
     public function getDataHoraSaida(): DateTime
@@ -41,12 +41,12 @@ class Viagem extends Model
         $this->dataHoraSaida = $dataHoraSaida;
     }
 
-    public function getDataHoraChegada(): DateTime
+    public function getDataHoraChegada(): ?DateTime
     {
         return $this->dataHoraChegada;
     }
 
-    public function setDataHoraChegada(DateTime $dataHoraChegada): void
+    public function setDataHoraChegada(?DateTime $dataHoraChegada): void
     {
         $this->dataHoraChegada = $dataHoraChegada;
     }

@@ -113,7 +113,7 @@ class MotoristaRepository
         $sql = "SELECT m.id, u.nome, u.email FROM motorista m
                 JOIN usuario u ON m.usuario_id = u.id
                 WHERE (m.ativo = 1 " . ($currentMotoristaId ? "OR m.id = :current_id" : "") . ")
-                  AND (u.nome ILIKE :term OR m.id = :term_id)
+                  AND (u.nome LIKE :term OR m.id = :term_id)
                 LIMIT 8";
 
         $stmt = $this->pdo->prepare($sql);

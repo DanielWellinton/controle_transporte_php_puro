@@ -1,0 +1,235 @@
+<?php 
+$title = 'Detalhes da Rota';
+$headerTitle = 'Detalhes da Rota';
+
+// Extração segura dos dados da rota injetados pelo Controller
+$rotaId = $rota['id'] ?? '';
+$rotaDescricao = $rota['descricao'] ?? '';
+$rotaAtivo = !empty($rota['ativo']);
+
+$pontosVinculados = $rota['pontosDeParada'] ?? [];
+
+// Filtra e ordena apenas os pontos ativos na rota para o mapa
+$pontosAtivos = [];
+foreach ($pontosVinculados as $ponto) {
+    $ativoPivot = !empty($ponto['pivot_ativo']) || (isset($ponto['ativo']) && $ponto['ativo']);
+    if ($ativoPivot) {
+        $pontosAtivos[] = [
+            'id' => $ponto['id'],
+            'descricao' => $ponto['descricao'] ?? '',
+            'lat' => (float) str_replace(',', '.', $ponto['latitude'] ?? '0'),
+            'lng' => (float) str_replace(',', '.', $ponto['longitude'] ?? '0'),
+            'ordem' => (int) ($ponto['ordem'] ?? 1)
+        ];
+    }
+}
+
+// Ordena por ordem na pivot
+usort($pontosAtivos, function($a, $b) {
+    return $a['ordem'] <=> $b['ordem'];
+});
+
+// Ordena também a lista geral para a tabela
+$pontosTabela = $pontosVinculados;
+usort($pontosTabela, function($a, $b) {
+    return ($a['ordem'] ?? 1) <=> ($b['ordem'] ?? 1);
+});
+?>
+
+<!-- Leaflet CSS carregado diretamente -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+    /* Previne distorções visuais de marcadores e tiles causadas por resets de imagem do Tailwind */
+    .leaflet-container img {
+        max-width: none !important;
+        max-height: none !important;
+    }
+</style>
+
+<div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- Card Topo / Cabeçalho -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-3">
+                <a href="/rotas" class="text-xs font-semibold text-slate-500 hover:text-slate-800 transition">
+                    &larr; Voltar para Rotas
+                </a>
+                <h2 class="text-base font-bold text-slate-800">
+                    <?= htmlspecialchars($rotaDescricao) ?>
+                </h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Visualização detalhada do trajeto e itinerário de paradas.</p>
+        </div>
+
+        <div class="flex items-center gap-3 self-start sm:self-auto">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold <?= $rotaAtivo ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200' ?>">
+                <span class="w-1.5 h-1.5 rounded-full <?= $rotaAtivo ? 'bg-emerald-500' : 'bg-rose-500' ?>"></span>
+                <?= $rotaAtivo ? 'Rota Ativa' : 'Rota Inativa' ?>
+            </span>
+
+            <a href="/rotas/edit?id=<?= $rotaId ?>" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl transition shadow-md shadow-indigo-500/20 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span>Editar Rota</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Mapa Interativo -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+        <div class="flex justify-between items-center px-1">
+            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Visualização do Trajeto</h3>
+            <div id="distancia-info" class="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100 hidden"></div>
+        </div>
+
+        <div 
+            id="map" 
+            style="height: 450px; width: 100%; min-height: 450px;"
+            class="rounded-xl border border-slate-200 z-10 overflow-hidden shadow-sm"
+            data-pontos='<?= htmlspecialchars(json_encode($pontosAtivos), ENT_QUOTES, 'UTF-8') ?>'
+        ></div>
+    </div>
+
+    <!-- Tabela de Itinerário Completo -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+        <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Itinerário de Paradas</h3>
+
+        <?php if(!empty($pontosTabela)): ?>
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                        <th scope="col" class="px-6 py-3.5 text-center w-24">Parada</th>
+                        <th scope="col" class="px-6 py-3.5">Descrição do Ponto</th>
+                        <th scope="col" class="px-6 py-3.5 text-center">Coordenadas</th>
+                        <th scope="col" class="px-6 py-3.5 text-center">Status na Rota</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-xs">
+                    <?php foreach ($pontosTabela as $ponto): 
+                        $pOrdem = $ponto['ordem'] ?? 1;
+                        $pDesc = $ponto['descricao'] ?? '';
+                        $pLat = str_replace(',', '.', $ponto['latitude'] ?? '0');
+                        $pLng = str_replace(',', '.', $ponto['longitude'] ?? '0');
+                        $pAtivo = !empty($ponto['pivot_ativo']);
+                    ?>
+                    <tr class="hover:bg-slate-50/70 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="inline-flex items-center justify-center w-7 h-7 text-xs font-bold rounded-full <?= $pAtivo ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-400 border border-slate-200' ?>">
+                                <?= $pOrdem ?>
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
+                            <?= htmlspecialchars($pDesc) ?>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center font-mono text-slate-500">
+                            <?= htmlspecialchars($pLat) ?>, <?= htmlspecialchars($pLng) ?>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <?php if($pAtivo): ?>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    Ativo
+                                </span>
+                            <?php else: ?>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                    Ignorado
+                                </span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php else: ?>
+        <div class="py-8 text-center text-slate-400 font-medium text-xs border border-dashed border-slate-200 rounded-xl">
+            Nenhum ponto de parada vinculado a esta rota.
+        </div>
+        <?php endif; ?>
+    </div>
+
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const mapElement = document.getElementById('map');
+        const distanciaInfo = document.getElementById('distancia-info');
+        if (!mapElement) return;
+
+        // Redefinição de URLs dos ícones padrão para evitar imagem quebrada
+        delete L.Icon.Default.prototype._getIconUrl;
+        L.Icon.Default.mergeOptions({
+            iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        });
+
+        const defaultLat = -23.550520;
+        const defaultLng = -46.633309;
+
+        const map = L.map('map').setView([defaultLat, defaultLng], 13);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        const pontos = JSON.parse(mapElement.dataset.pontos || '[]');
+
+        if (pontos.length === 0) return;
+
+        // Adiciona marcadores numerados
+        pontos.forEach((ponto, index) => {
+            const customIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style="background-color: #4f46e5; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${index + 1}</div>`,
+                iconSize: [28, 28],
+                iconAnchor: [14, 14]
+            });
+
+            L.marker([ponto.lat, ponto.lng], { icon: customIcon })
+                .addTo(map)
+                .bindPopup(`<b>Parada ${index + 1}: ${ponto.descricao}</b>`);
+        });
+
+        // Traça rodovia com OSRM
+        if (pontos.length >= 2) {
+            const coordinatesStr = pontos.map(p => `${p.lng},${p.lat}`).join(';');
+            const url = `https://router.project-osrm.org/route/v1/driving/${coordinatesStr}?overview=full&geometries=geojson`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.routes && data.routes.length > 0) {
+                        const route = data.routes[0];
+                        const routeCoordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+
+                        const polyline = L.polyline(routeCoordinates, {
+                            color: '#4f46e5',
+                            weight: 5,
+                            opacity: 0.8
+                        }).addTo(map);
+
+                        map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
+
+                        if (distanciaInfo) {
+                            const distanciaKm = (route.distance / 1000).toFixed(1);
+                            distanciaInfo.textContent = `Distância Total: ${distanciaKm} km`;
+                            distanciaInfo.classList.remove('hidden');
+                        }
+                    }
+                })
+                .catch(err => console.error("Erro ao carregar rota OSRM:", err));
+        } else {
+            map.setView([pontos[0].lat, pontos[0].lng], 15);
+        }
+
+        setTimeout(() => map.invalidateSize(), 300);
+    });
+</script>

@@ -6,9 +6,9 @@ class CreateViagemTable
     {
         $sql = "CREATE TABLE IF NOT EXISTS viagem (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            qrcode VARCHAR(255) NOT NULL UNIQUE,
+            codigo_qr VARCHAR(255) NOT NULL UNIQUE,
             data_hora_saida DATETIME NOT NULL,
-            data_hora_chegada DATETIME NOT NULL,
+            data_hora_chegada DATETIME NULL,
             rota_id INT NOT NULL,
             motorista_id INT NOT NULL,
             veiculo_id INT NOT NULL,
