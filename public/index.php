@@ -4,33 +4,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-require_once __DIR__ . '/../src/Helpers/view.php';
-require_once __DIR__ . '/../config/Database.php';
-
-require_once __DIR__ . '/../src/Repositories/UsuarioRepository.php';
-require_once __DIR__ . '/../src/Controllers/AuthController.php';
-require_once __DIR__ . '/../src/Controllers/UsuarioController.php';
-
-require_once __DIR__ . '/../src/Repositories/MotoristaRepository.php';
-require_once __DIR__ . '/../src/Controllers/MotoristaController.php';
-
-require_once __DIR__ . '/../src/Repositories/VeiculoRepository.php';
-require_once __DIR__ . '/../src/Controllers/VeiculoController.php';
-
-require_once __DIR__ . '/../src/Repositories/PontoDeParadaRepository.php';
-require_once __DIR__ . '/../src/Controllers/PontoDeParadaController.php';
-
-require_once __DIR__ . '/../src/Repositories/RotaRepository.php';
-require_once __DIR__ . '/../src/Controllers/RotaController.php';
-
-require_once __DIR__ . '/../src/Repositories/ViagemRepository.php';
-require_once __DIR__ . '/../src/Controllers/ViagemController.php';
-
-require_once __DIR__ . '/../src/Repositories/PortalMotoristaRepository.php';
-require_once __DIR__ . '/../src/Controllers/PortalMotoristaController.php';
-
-require_once __DIR__ . '/../src/Repositories/PassageiroRepository.php';
-require_once __DIR__ . '/../src/Controllers/PassageiroController.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uri = rtrim($uri, '/');

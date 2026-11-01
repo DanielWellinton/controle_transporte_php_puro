@@ -1,5 +1,6 @@
 <?php
 
+use Services\JwtService;
 class AuthController
 {
     private PDO $pdo;
@@ -24,24 +25,47 @@ class AuthController
     {
         $email = $_POST['email'] ?? '';
         $senha = $_POST['password'] ?? '';
-
+    
         $usuario = $this->usuarioRepository->verificarCredenciais($email, $senha);
-
+    
         if (!$usuario) {
             $_SESSION['error'] = 'E-mail ou senha incorretos.';
             header('Location: /login');
             exit;
         }
-
-        // Armazena dados essenciais na sessão
-        $_SESSION['usuario'] = [
+    
+        // Dados que vão dentro do token
+        $dadosPayload = [
             'id' => $usuario['id'],
             'nome' => $usuario['nome'],
             'email' => $usuario['email']
         ];
-        $_SESSION['usuario_id'] = $usuario['id']; // útil para verificações como o destroy do UserController
-
+    
+        // Gera o JWT
+        $jwtToken = JwtService::gerarToken($dadosPayload);
+    
+        // Guarda o JWT num Cookie HTTP-only (seguro contra XSS)
+        setcookie('auth_token', $jwtToken, [
+            'expires' => time() + (86400 * 7),
+            'path' => '/',
+            'secure' => false,   // Colocar true se usar HTTPS em produção
+            'httponly' => true,  // Inacessível via JavaScript no browser
+            'samesite' => 'Lax'
+        ]);
+    
+        // Mantém compatibilidade rápida com o resto do sistema se necessário
+        $_SESSION['usuario_id'] = $usuario['id'];
+    
         header('Location: /dashboard');
+        exit;
+    }
+    
+    public function logout(): void
+    {
+        // Remove o cookie expirando-o
+        setcookie('auth_token', '', time() - 3600, '/');
+        session_destroy();
+        header('Location: /login');
         exit;
     }
 
@@ -93,15 +117,6 @@ class AuthController
         $this->usuarioRepository->create($dados);
 
         $_SESSION['success'] = 'Conta criada com sucesso! Faça login para continuar.';
-        header('Location: /login');
-        exit;
-    }
-
-    public function logout(): void
-    {
-        unset($_SESSION['usuario']);
-        unset($_SESSION['usuario_id']);
-        session_destroy();
         header('Location: /login');
         exit;
     }

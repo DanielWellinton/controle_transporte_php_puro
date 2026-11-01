@@ -11,19 +11,9 @@ class PassageiroController
         $this->repository = new PassageiroRepository($this->pdo);
     }
 
-    private function getUsuarioLogado(): array
-    {
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: /login');
-            exit;
-        }
-        return $_SESSION['usuario'];
-    }
-
     public function index(): void
     {
-        $user = $this->getUsuarioLogado();
-        $userId = (int) $user['id'];
+        $userId = $_SESSION['usuario_id'];
 
         $search = $_GET['search'] ?? null;
         $dataInicio = $_GET['data_inicio'] ?? null;
@@ -40,8 +30,7 @@ class PassageiroController
 
     public function selecionarPontos(): void
     {
-        $user = $this->getUsuarioLogado();
-        $userId = (int) $user['id'];
+        $userId = $_SESSION['usuario_id'];
         $viagemId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
         $viagem = $this->repository->findViagemDetalhes($viagemId);
@@ -62,8 +51,7 @@ class PassageiroController
 
     public function salvarPontos(): void
     {
-        $user = $this->getUsuarioLogado();
-        $userId = (int) $user['id'];
+        $userId = $_SESSION['usuario_id'];
         $viagemId = isset($_POST['viagem_id']) ? (int) $_POST['viagem_id'] : 0;
         
         $pontoSaidaId = isset($_POST['ponto_de_parada_saida_id']) ? (int) $_POST['ponto_de_parada_saida_id'] : 0;
@@ -84,8 +72,7 @@ class PassageiroController
 
     public function cancelar(): void
     {
-        $user = $this->getUsuarioLogado();
-        $userId = (int) $user['id'];
+        $userId = $_SESSION['usuario_id'];
         $viagemId = isset($_POST['id']) || isset($_GET['id']) ? (int) ($_POST['id'] ?? $_GET['id']) : 0;
 
         $this->repository->cancelarInscricao($userId, $viagemId);
@@ -97,8 +84,7 @@ class PassageiroController
 
     public function historico(): void
     {
-        $user = $this->getUsuarioLogado();
-        $userId = (int) $user['id'];
+        $userId = $_SESSION['usuario_id'];
 
         $search = $_GET['search'] ?? null;
         $dataInicio = $_GET['data_inicio'] ?? null;

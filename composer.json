@@ -1,0 +1,21 @@
+{
+    "name": "danielw/controle_transporte_php_puro",
+    "type": "project",
+    "require": {
+        "firebase/php-jwt": "^6.10"
+    },
+    "autoload": {
+        "classmap": [
+            "src/Helpers/",
+            "src/Controllers/",
+            "src/Models/",
+            "src/Repositories/",
+            "src/Middleware/",
+            "src/Services/",
+            "src/Config/"
+        ],
+        "files": [
+            "src/Helpers/view.php"
+        ]
+    }
+}

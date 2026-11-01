@@ -4,10 +4,11 @@ services:
   app:
     build: .
     container_name: php_app
-    env_file:
-      - .env
     volumes:
       - ./:/var/www/html
+      - /var/www/html/vendor
+    env_file:
+      - .env
 
   web:
     image: nginx:alpine
@@ -25,9 +26,9 @@ services:
     container_name: mysql_db
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: controle_estoque_php_puro
-      MYSQL_USER: myuser
-      MYSQL_PASSWORD: mypassword
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
