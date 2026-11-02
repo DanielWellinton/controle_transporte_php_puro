@@ -1,14 +1,16 @@
 <?php
 
+use Services\MotoristaService;
+
 class MotoristaController
 {
-    private PDO $pdo;
-    private MotoristaRepository $motoristaRepository;
+    private MotoristaService $motoristaService;
 
     public function __construct()
     {
-        $this->pdo = Database::conectar();
-        $this->motoristaRepository = new MotoristaRepository($this->pdo);
+        $pdo = Database::conectar();
+        $motoristaRepository = new MotoristaRepository($pdo);
+        $this->motoristaService = new MotoristaService($motoristaRepository);
     }
 
     public function index(): void
@@ -17,7 +19,7 @@ class MotoristaController
         $status = $_GET['status'] ?? null;
         $pagina = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 
-        $resultado = $this->motoristaRepository->paginate(10, $pagina, $search, $status);
+        $resultado = $this->motoristaService->listarPaginado($search, $status, $pagina, 10);
 
         view('motoristas.index', ['motoristas' => $resultado]);
     }
@@ -29,30 +31,28 @@ class MotoristaController
 
     public function store(): void
     {
-        $dados = [
-            'usuario_id' => $_POST['usuario_id'] ?? null,
-            'cnh' => $_POST['cnh'] ?? null,
-            'data_validade_cnh' => $_POST['data_validade_cnh'] ?? null,
-            'ativo' => isset($_POST['ativo']) ? 1 : 0
-        ];
+        try {
+            $this->motoristaService->cadastrar($_POST);
 
-        if (empty($dados['usuario_id']) || empty($dados['cnh']) || empty($dados['data_validade_cnh'])) {
-            $_SESSION['error'] = 'Por favor, preencha todos os campos obrigatórios.';
+            $_SESSION['success'] = 'Motorista cadastrado com sucesso.';
+            header('Location: /motoristas');
+            exit;
+
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: /motoristas/create');
+            exit;
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao cadastrar motorista.';
             header('Location: /motoristas/create');
             exit;
         }
-
-        $this->motoristaRepository->create($dados);
-
-        $_SESSION['success'] = 'Motorista cadastrado com sucesso.';
-        header('Location: /motoristas');
-        exit;
     }
 
     public function show(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        $motorista = $this->motoristaRepository->findById($id);
+        $motorista = $this->motoristaService->buscarPorId($id);
 
         if (!$motorista) {
             $_SESSION['error'] = 'Motorista não encontrado.';
@@ -66,7 +66,7 @@ class MotoristaController
     public function edit(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        $motorista = $this->motoristaRepository->findById($id);
+        $motorista = $this->motoristaService->buscarPorId($id);
 
         if (!$motorista) {
             $_SESSION['error'] = 'Motorista não encontrado.';
@@ -80,36 +80,36 @@ class MotoristaController
     public function update(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        
-        $dados = [
-            'usuario_id' => $_POST['usuario_id'] ?? null,
-            'cnh' => $_POST['cnh'] ?? null,
-            'data_validade_cnh' => $_POST['data_validade_cnh'] ?? null,
-            'ativo' => isset($_POST['ativo']) ? 1 : 0
-        ];
 
-        if ($id <= 0 || empty($dados['usuario_id']) || empty($dados['cnh']) || empty($dados['data_validade_cnh'])) {
-            $_SESSION['error'] = 'Dados inválidos para atualização.';
+        try {
+            $this->motoristaService->atualizar($id, $_POST);
+
+            $_SESSION['success'] = 'Motorista atualizado com sucesso.';
+            header('Location: /motoristas');
+            exit;
+
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: /motoristas/edit?id=' . $id);
+            exit;
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao atualizar motorista.';
             header('Location: /motoristas/edit?id=' . $id);
             exit;
         }
-
-        $this->motoristaRepository->update($id, $dados);
-
-        $_SESSION['success'] = 'Motorista atualizado com sucesso.';
-        header('Location: /motoristas');
-        exit;
     }
 
     public function destroy(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
-        if ($id > 0) {
-            $this->motoristaRepository->delete($id);
+        try {
+            $this->motoristaService->excluir($id);
             $_SESSION['success'] = 'Motorista removido com sucesso.';
-        } else {
-            $_SESSION['error'] = 'ID de motorista inválido.';
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao remover motorista.';
         }
 
         header('Location: /motoristas');
@@ -123,18 +123,7 @@ class MotoristaController
         $term = $_GET['q'] ?? '';
         $currentMotoristaId = isset($_GET['current_id']) ? (int) $_GET['current_id'] : null;
 
-        if (empty($term)) {
-            echo json_encode([]);
-            exit;
-        }
-
-        $motoristas = $this->motoristaRepository->autocomplete($term, $currentMotoristaId);
-
-        $dados = array_map(fn($m) => [
-            'id' => $m['id'],
-            'nome' => $m['nome'] ?? "Motorista #{$m['id']}",
-            'email' => $m['email'] ?? ''
-        ], $motoristas);
+        $dados = $this->motoristaService->autocomplete($term, $currentMotoristaId);
 
         echo json_encode($dados);
         exit;

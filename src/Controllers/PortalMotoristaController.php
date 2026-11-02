@@ -1,19 +1,20 @@
 <?php
 
+use Services\PortalMotoristaService;
+
 class PortalMotoristaController
 {
-    private PDO $pdo;
-    private PortalMotoristaRepository $repository;
+    private PortalMotoristaService $service;
 
     public function __construct()
     {
-        $this->pdo = Database::conectar();
-        $this->repository = new PortalMotoristaRepository($this->pdo);
+        $pdo = Database::conectar();
+        $repository = new PortalMotoristaRepository($pdo);
+        $this->service = new PortalMotoristaService($repository);
     }
 
     private function getUsuarioLogado(): array
     {
-        // Simulação do usuário autenticado na sessão PHP puro
         if (!isset($_SESSION['usuario'])) {
             header('Location: /login');
             exit;
@@ -21,44 +22,30 @@ class PortalMotoristaController
         return $_SESSION['usuario'];
     }
 
-    private function verificarMotorista(): array
+    private function checarMotoristaSeguro(): array
     {
         $user = $this->getUsuarioLogado();
 
-        // Verifica papel de motorista (ajuste conforme a regra de perfis da sua sessão)
-        if (($user['role'] ?? '') !== 'motorista' && !($user['is_admin'] ?? false)) {
-            header('HTTP/1.1 403 Forbidden');
-            echo "Usuário não possui o papel de motorista.";
-            exit;
-        }
-
-        $motorista = $this->repository->findMotoristaByUserId((int) $user['id']);
-
-        if (!$motorista) {
-            $_SESSION['error'] = 'Seu cadastro de motorista ainda não foi concluído.';
+        try {
+            return $this->service->verificarMotorista($user);
+        } catch (\RuntimeException $e) {
+            if ($e->getCode() === 403) {
+                header('HTTP/1.1 403 Forbidden');
+                echo $e->getMessage();
+                exit;
+            }
+            throw $e;
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
             header('Location: /home');
-            exit;
-        }
-
-        return $motorista;
-    }
-
-    private function autorizarMotorista(array $motorista, array $viagem): void
-    {
-        $user = $this->getUsuarioLogado();
-        $isAdmin = $user['is_admin'] ?? false;
-
-        if ($viagem['motorista_id'] != $motorista['id'] && !$isAdmin) {
-            header('HTTP/1.1 403 Forbidden');
-            echo "Você não tem permissão para gerenciar esta viagem.";
             exit;
         }
     }
 
     public function index(): void
     {
-        $motorista = $this->verificarMotorista();
-        $viagens = $this->repository->getViagensAtivasByMotorista((int) $motorista['id']);
+        $motorista = $this->checarMotoristaSeguro();
+        $viagens = $this->service->listarViagensAtivas((int) $motorista['id']);
 
         view('portal_motorista.index', [
             'viagens' => $viagens
@@ -67,14 +54,14 @@ class PortalMotoristaController
 
     public function historico(): void
     {
-        $motorista = $this->verificarMotorista();
+        $motorista = $this->checarMotoristaSeguro();
         
         $search = $_GET['search'] ?? null;
         $dataInicio = $_GET['data_inicio'] ?? null;
         $dataFim = $_GET['data_fim'] ?? null;
         $pagina = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 
-        $resultado = $this->repository->paginateHistorico((int) $motorista['id'], 10, $pagina, $search, $dataInicio, $dataFim);
+        $resultado = $this->service->listarHistorico((int) $motorista['id'], $search, $dataInicio, $dataFim, $pagina);
 
         view('portal_motorista.historico', [
             'historico' => $resultado
@@ -83,34 +70,47 @@ class PortalMotoristaController
 
     public function show(): void
     {
-        $motorista = $this->verificarMotorista();
+        $motorista = $this->checarMotoristaSeguro();
+        $user = $this->getUsuarioLogado();
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
         
-        $viagem = $this->repository->findViagemDetalhes($id);
+        try {
+            $viagem = $this->service->buscarDetalhesViagem($id, $motorista, $user);
 
-        if (!$viagem) {
-            $_SESSION['error'] = 'Viagem não encontrada.';
+            view('portal_motorista.show', [
+                'viagem' => $viagem
+            ]);
+
+        } catch (\RuntimeException $e) {
+            if ($e->getCode() === 403) {
+                header('HTTP/1.1 403 Forbidden');
+                echo $e->getMessage();
+                exit;
+            }
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
             header('Location: /portal-motorista');
             exit;
         }
-
-        $this->autorizarMotorista($motorista, $viagem);
-
-        view('portal_motorista.show', [
-            'viagem' => $viagem
-        ]);
     }
 
     public function iniciar(): void
     {
-        $motorista = $this->verificarMotorista();
+        $motorista = $this->checarMotoristaSeguro();
+        $user = $this->getUsuarioLogado();
         $id = isset($_POST['id']) || isset($_GET['id']) ? (int) ($_POST['id'] ?? $_GET['id']) : 0;
 
-        $viagem = $this->repository->findViagemDetalhes($id);
-        if ($viagem) {
-            $this->autorizarMotorista($motorista, $viagem);
-            $this->repository->iniciarViagem($id);
+        try {
+            $this->service->iniciarViagem($id, $motorista, $user);
             $_SESSION['success'] = 'Viagem iniciada com sucesso!';
+        } catch (\RuntimeException $e) {
+            if ($e->getCode() === 403) {
+                header('HTTP/1.1 403 Forbidden');
+                echo $e->getMessage();
+                exit;
+            }
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao iniciar a viagem.';
         }
 
         header('Location: /portal-motorista/show?id=' . $id);
@@ -119,14 +119,21 @@ class PortalMotoristaController
 
     public function finalizar(): void
     {
-        $motorista = $this->verificarMotorista();
+        $motorista = $this->checarMotoristaSeguro();
+        $user = $this->getUsuarioLogado();
         $id = isset($_POST['id']) || isset($_GET['id']) ? (int) ($_POST['id'] ?? $_GET['id']) : 0;
 
-        $viagem = $this->repository->findViagemDetalhes($id);
-        if ($viagem) {
-            $this->autorizarMotorista($motorista, $viagem);
-            $this->repository->finalizarViagem($id);
+        try {
+            $this->service->finalizarViagem($id, $motorista, $user);
             $_SESSION['success'] = 'Viagem finalizada com sucesso!';
+        } catch (\RuntimeException $e) {
+            if ($e->getCode() === 403) {
+                header('HTTP/1.1 403 Forbidden');
+                echo $e->getMessage();
+                exit;
+            }
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao finalizar a viagem.';
         }
 
         header('Location: /portal-motorista/show?id=' . $id);
@@ -135,21 +142,27 @@ class PortalMotoristaController
 
     public function imprimir(): void
     {
-        $motorista = $this->verificarMotorista();
+        $motorista = $this->checarMotoristaSeguro();
+        $user = $this->getUsuarioLogado();
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
-        $viagem = $this->repository->findViagemDetalhes($id);
+        try {
+            $viagem = $this->service->buscarDetalhesViagem($id, $motorista, $user);
 
-        if (!$viagem) {
-            $_SESSION['error'] = 'Viagem não encontrada.';
+            view('portal_motorista.imprimir', [
+                'viagem' => $viagem
+            ]);
+
+        } catch (\RuntimeException $e) {
+            if ($e->getCode() === 403) {
+                header('HTTP/1.1 403 Forbidden');
+                echo $e->getMessage();
+                exit;
+            }
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
             header('Location: /portal-motorista');
             exit;
         }
-
-        $this->autorizarMotorista($motorista, $viagem);
-
-        view('portal_motorista.imprimir', [
-            'viagem' => $viagem
-        ]);
     }
 }

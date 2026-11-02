@@ -1,14 +1,16 @@
 <?php
 
+use Services\PontoDeParadaService;
+
 class PontoDeParadaController
 {
-    private PDO $pdo;
-    private PontoDeParadaRepository $repository;
+    private PontoDeParadaService $service;
 
     public function __construct()
     {
-        $this->pdo = Database::conectar();
-        $this->repository = new PontoDeParadaRepository($this->pdo);
+        $pdo = Database::conectar();
+        $repository = new PontoDeParadaRepository($pdo);
+        $this->service = new PontoDeParadaService($repository);
     }
 
     public function index(): void
@@ -17,7 +19,7 @@ class PontoDeParadaController
         $status = $_GET['status'] ?? null;
         $pagina = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 
-        $resultado = $this->repository->paginate(10, $pagina, $search, $status);
+        $resultado = $this->service->listarPaginado($search, $status, $pagina, 10);
 
         view('ponto_de_paradas.index', [
             'pontoDeParada' => $resultado
@@ -31,33 +33,28 @@ class PontoDeParadaController
 
     public function store(): void
     {
-        $descricao = trim($_POST['descricao'] ?? '');
-        $latitude  = trim($_POST['latitude'] ?? '');
-        $longitude = trim($_POST['longitude'] ?? '');
-        $ativo     = isset($_POST['ativo']) ? 1 : 0;
+        try {
+            $this->service->cadastrar($_POST);
 
-        if (empty($descricao) || empty($latitude) || empty($longitude)) {
-            $_SESSION['error'] = 'Preencha a descrição e selecione a localização no mapa.';
+            $_SESSION['success'] = 'Ponto de parada cadastrado com sucesso.';
+            header('Location: /ponto_de_paradas');
+            exit;
+
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: /ponto_de_paradas/create');
+            exit;
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao cadastrar ponto de parada.';
             header('Location: /ponto_de_paradas/create');
             exit;
         }
-
-        $this->repository->create([
-            'descricao' => $descricao,
-            'latitude'  => $latitude,
-            'longitude' => $longitude,
-            'ativo'     => $ativo
-        ]);
-
-        $_SESSION['success'] = 'Ponto de parada cadastrado com sucesso.';
-        header('Location: /ponto_de_paradas');
-        exit;
     }
 
     public function show(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        $pontoDeParada = $this->repository->findById($id);
+        $pontoDeParada = $this->service->buscarPorId($id);
 
         if (!$pontoDeParada) {
             $_SESSION['error'] = 'Ponto de parada não encontrado.';
@@ -73,7 +70,7 @@ class PontoDeParadaController
     public function edit(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        $pontoDeParada = $this->repository->findById($id);
+        $pontoDeParada = $this->service->buscarPorId($id);
 
         if (!$pontoDeParada) {
             $_SESSION['error'] = 'Ponto de parada não encontrado.';
@@ -88,37 +85,37 @@ class PontoDeParadaController
 
     public function update(): void
     {
-        $id        = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        $descricao = trim($_POST['descricao'] ?? '');
-        $latitude  = trim($_POST['latitude'] ?? '');
-        $longitude = trim($_POST['longitude'] ?? '');
-        $ativo     = isset($_POST['ativo']) ? 1 : 0;
+        $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
-        if ($id <= 0 || empty($descricao) || empty($latitude) || empty($longitude)) {
-            $_SESSION['error'] = 'Dados inválidos para atualização.';
+        try {
+            $this->service->atualizar($id, $_POST);
+
+            $_SESSION['success'] = 'Ponto de parada atualizado com sucesso.';
+            header('Location: /ponto_de_paradas');
+            exit;
+
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: /ponto_de_paradas/edit?id=' . $id);
+            exit;
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao atualizar ponto de parada.';
             header('Location: /ponto_de_paradas/edit?id=' . $id);
             exit;
         }
-
-        $this->repository->update($id, [
-            'descricao' => $descricao,
-            'latitude'  => $latitude,
-            'longitude' => $longitude,
-            'ativo'     => $ativo
-        ]);
-
-        $_SESSION['success'] = 'Ponto de parada atualizado com sucesso.';
-        header('Location: /ponto_de_paradas');
-        exit;
     }
 
     public function destroy(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
-        if ($id > 0) {
-            $this->repository->delete($id);
+        try {
+            $this->service->excluir($id);
             $_SESSION['success'] = 'Ponto de parada removido com sucesso.';
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao remover ponto de parada.';
         }
 
         header('Location: /ponto_de_paradas');
@@ -129,15 +126,10 @@ class PontoDeParadaController
     {
         header('Content-Type: application/json');
 
-        $term = trim($_GET['q'] ?? '');
+        $term = $_GET['q'] ?? '';
         $rotaId = isset($_GET['rota_id']) ? (int) $_GET['rota_id'] : null;
 
-        if (empty($term)) {
-            echo json_encode([]);
-            exit;
-        }
-
-        $pontos = $this->repository->autocomplete($term, $rotaId);
+        $pontos = $this->service->autocomplete($term, $rotaId);
         echo json_encode($pontos);
         exit;
     }

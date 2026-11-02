@@ -1,14 +1,16 @@
 <?php
 
+use Services\ViagemService;
+
 class ViagemController
 {
-    private PDO $pdo;
-    private ViagemRepository $repository;
+    private ViagemService $service;
 
     public function __construct()
     {
-        $this->pdo = Database::conectar();
-        $this->repository = new ViagemRepository($this->pdo);
+        $pdo = Database::conectar();
+        $repository = new ViagemRepository($pdo);
+        $this->service = new ViagemService($repository);
     }
 
     public function index(): void
@@ -19,7 +21,7 @@ class ViagemController
         $status = $_GET['status'] ?? null;
         $pagina = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 
-        $resultado = $this->repository->paginate(10, $pagina, $search, $dataInicio, $dataFim, $status);
+        $resultado = $this->service->listarPaginado($search, $dataInicio, $dataFim, $status, $pagina, 10);
 
         view('viagems.index', [
             'viagens' => $resultado
@@ -28,47 +30,40 @@ class ViagemController
 
     public function create(): void
     {
+        $formData = $this->service->obterDadosFormulario();
+
         view('viagems.create', [
-            'rotas' => $this->repository->getRotasAtivas(),
-            'motoristas' => $this->repository->getMotoristasAtivos(),
-            'veiculos' => $this->repository->getVeiculosAtivos(),
+            'rotas' => $formData['rotas'],
+            'motoristas' => $formData['motoristas'],
+            'veiculos' => $formData['veiculos'],
             'viagem' => null
         ]);
     }
 
     public function store(): void
     {
-        $rotaId = isset($_POST['rota_id']) ? (int) $_POST['rota_id'] : 0;
-        $motoristaId = isset($_POST['motorista_id']) ? (int) $_POST['motorista_id'] : 0;
-        $veiculoId = isset($_POST['veiculo_id']) ? (int) $_POST['veiculo_id'] : 0;
-        $dataSaida = $_POST['data_hora_saida'] ?? '';
-        $dataChegada = $_POST['data_hora_chegada'] ?? null;
-        $ativo = isset($_POST['ativo']) ? 1 : 0;
+        try {
+            $this->service->cadastrar($_POST);
 
-        if ($rotaId <= 0 || $motoristaId <= 0 || $veiculoId <= 0 || empty($dataSaida)) {
-            $_SESSION['error'] = 'Preencha todos os campos obrigatórios da viagem.';
+            $_SESSION['success'] = 'Viagem agendada com sucesso!';
+            header('Location: /viagens');
+            exit;
+
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: /viagens/create');
+            exit;
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao agendar viagem.';
             header('Location: /viagens/create');
             exit;
         }
-
-        $this->repository->create([
-            'rota_id' => $rotaId,
-            'motorista_id' => $motoristaId,
-            'veiculo_id' => $veiculoId,
-            'data_hora_saida' => $dataSaida,
-            'data_hora_chegada' => $dataChegada,
-            'ativo' => $ativo
-        ]);
-
-        $_SESSION['success'] = 'Viagem agendada com sucesso!';
-        header('Location: /viagens');
-        exit;
     }
 
     public function show(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        $viagem = $this->repository->findById($id);
+        $viagem = $this->service->buscarPorId($id);
 
         if (!$viagem) {
             $_SESSION['error'] = 'Viagem não encontrada.';
@@ -76,7 +71,6 @@ class ViagemController
             exit;
         }
 
-        // Se precisares de pontos de parada da rota ou passageiros no futuro, podes carregar aqui.
         view('viagems.show', [
             'viagem' => $viagem
         ]);
@@ -85,7 +79,7 @@ class ViagemController
     public function edit(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        $viagem = $this->repository->findById($id);
+        $viagem = $this->service->buscarPorId($id);
 
         if (!$viagem) {
             $_SESSION['error'] = 'Viagem não encontrada.';
@@ -93,51 +87,49 @@ class ViagemController
             exit;
         }
 
+        $formData = $this->service->obterDadosFormulario();
+
         view('viagems.edit', [
             'viagem' => $viagem,
-            'rotas' => $this->repository->getRotasAtivas(),
-            'motoristas' => $this->repository->getMotoristasAtivos(),
-            'veiculos' => $this->repository->getVeiculosAtivos()
+            'rotas' => $formData['rotas'],
+            'motoristas' => $formData['motoristas'],
+            'veiculos' => $formData['veiculos']
         ]);
     }
 
     public function update(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        $rotaId = isset($_POST['rota_id']) ? (int) $_POST['rota_id'] : 0;
-        $motoristaId = isset($_POST['motorista_id']) ? (int) $_POST['motorista_id'] : 0;
-        $veiculoId = isset($_POST['veiculo_id']) ? (int) $_POST['veiculo_id'] : 0;
-        $dataSaida = $_POST['data_hora_saida'] ?? '';
-        $dataChegada = $_POST['data_hora_chegada'] ?? null;
-        $ativo = isset($_POST['ativo']) ? 1 : 0;
 
-        if ($id <= 0 || $rotaId <= 0 || $motoristaId <= 0 || $veiculoId <= 0 || empty($dataSaida)) {
-            $_SESSION['error'] = 'Dados inválidos para atualização.';
+        try {
+            $this->service->atualizar($id, $_POST);
+
+            $_SESSION['success'] = 'Viagem atualizada com sucesso!';
+            header('Location: /viagens');
+            exit;
+
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: /viagens/edit?id=' . $id);
+            exit;
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao atualizar viagem.';
             header('Location: /viagens/edit?id=' . $id);
             exit;
         }
-
-        $this->repository->update($id, [
-            'rota_id' => $rotaId,
-            'motorista_id' => $motoristaId,
-            'veiculo_id' => $veiculoId,
-            'data_hora_saida' => $dataSaida,
-            'data_hora_chegada' => $dataChegada,
-            'ativo' => $ativo
-        ]);
-
-        $_SESSION['success'] = 'Viagem atualizada com sucesso!';
-        header('Location: /viagens');
-        exit;
     }
 
     public function destroy(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
-        if ($id > 0) {
-            $this->repository->delete($id);
+        try {
+            $this->service->excluir($id);
             $_SESSION['success'] = 'Viagem excluída com sucesso!';
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao excluir viagem.';
         }
 
         header('Location: /viagens');
@@ -147,23 +139,22 @@ class ViagemController
     public function duplicate(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        $viagem = $this->repository->findById($id);
 
-        if (!$viagem) {
-            $_SESSION['error'] = 'Viagem não encontrada para duplicação.';
+        try {
+            $viagem = $this->service->duplicar($id);
+            $formData = $this->service->obterDadosFormulario();
+
+            view('viagems.create', [
+                'viagem' => $viagem,
+                'rotas' => $formData['rotas'],
+                'motoristas' => $formData['motoristas'],
+                'veiculos' => $formData['veiculos']
+            ]);
+
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
             header('Location: /viagens');
             exit;
         }
-
-        $viagem['data_hora_saida'] = '';
-        $viagem['data_hora_chegada'] = '';
-        $viagem['codigo_qr'] = null;
-
-        view('viagems.create', [
-            'viagem' => $viagem,
-            'rotas' => $this->repository->getRotasAtivas(),
-            'motoristas' => $this->repository->getMotoristasAtivos(),
-            'veiculos' => $this->repository->getVeiculosAtivos()
-        ]);
     }
 }

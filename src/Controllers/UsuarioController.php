@@ -1,14 +1,17 @@
 <?php
 
+use Services\UsuarioService;
+
 class UsuarioController
 {
-    private PDO $pdo;
+    private UsuarioService $usuarioService;
     private UsuarioRepository $usuarioRepository;
 
     public function __construct()
     {
-        $this->pdo = Database::conectar();
-        $this->usuarioRepository = new UsuarioRepository($this->pdo);
+        $pdo = Database::conectar();
+        $this->usuarioRepository = new UsuarioRepository($pdo);
+        $this->usuarioService = new UsuarioService($this->usuarioRepository);
     }
 
     public function index(): void
@@ -17,8 +20,8 @@ class UsuarioController
         $papelId = $_GET['papel_id'] ?? null;
         $pagina = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 
-        $resultado = $this->usuarioRepository->paginate(10, $pagina, $search, $papelId);
-        $papeis = $this->usuarioRepository->getAllPapeisAtivos();
+        $resultado = $this->usuarioService->listarPaginado($search, $papelId, $pagina, 10);
+        $papeis = $this->usuarioService->listarPapeisAtivos();
 
         view('usuarios.index', [
             'usuarios' => $resultado,
@@ -28,51 +31,32 @@ class UsuarioController
 
     public function create(): void
     {
-        $papeis = $this->usuarioRepository->getAllPapeisAtivos();
+        $papeis = $this->usuarioService->listarPapeisAtivos();
         view('usuarios.create', ['papeis' => $papeis]);
     }
 
     public function store(): void
     {
-        $nome = $_POST['nome'] ?? '';
-        $email = $_POST['email'] ?? '';
-        $senha = $_POST['senha'] ?? '';
-        $senhaConfirmacao = $_POST['senha_confirmation'] ?? '';
-        $telefone = $_POST['telefone'] ?? null;
-        $dataNascimento = $_POST['data_nascimento'] ?? null;
-        $papeis = $_POST['papeis'] ?? [];
-
-        if (empty($nome) || empty($email) || empty($senha)) {
-            $_SESSION['error'] = 'Preencha todos os campos obrigatórios.';
+        try {
+            $this->usuarioService->cadastrar($_POST, $_POST['papeis'] ?? []);
+            $_SESSION['success'] = 'Usuário cadastrado com sucesso!';
+            header('Location: /usuarios');
+            exit;
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: /usuarios/create');
+            exit;
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao cadastrar usuário.';
             header('Location: /usuarios/create');
             exit;
         }
-
-        if ($senha !== $senhaConfirmacao) {
-            $_SESSION['error'] = 'As senhas não coincidem.';
-            header('Location: /usuarios/create');
-            exit;
-        }
-
-        $dados = [
-            'nome' => $nome,
-            'email' => $email,
-            'senha' => $senha,
-            'telefone' => $telefone,
-            'data_nascimento' => $dataNascimento
-        ];
-
-        $this->usuarioRepository->create($dados, $papeis);
-
-        $_SESSION['success'] = 'Usuário cadastrado com sucesso!';
-        header('Location: /usuarios');
-        exit;
     }
 
     public function edit(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        $usuario = $this->usuarioRepository->findById($id);
+        $usuario = $this->usuarioService->buscarPorId($id);
 
         if (!$usuario) {
             $_SESSION['error'] = 'Usuário não encontrado.';
@@ -80,7 +64,7 @@ class UsuarioController
             exit;
         }
 
-        $papeis = $this->usuarioRepository->getAllPapeisAtivos();
+        $papeis = $this->usuarioService->listarPapeisAtivos();
         $papeisUsuario = array_column($usuario['papeis'], 'id');
 
         view('usuarios.edit', [
@@ -93,39 +77,21 @@ class UsuarioController
     public function update(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        $nome = $_POST['nome'] ?? '';
-        $email = $_POST['email'] ?? '';
-        $senha = $_POST['senha'] ?? '';
-        $senhaConfirmacao = $_POST['senha_confirmation'] ?? '';
-        $telefone = $_POST['telefone'] ?? null;
-        $dataNascimento = $_POST['data_nascimento'] ?? null;
-        $papeis = $_POST['papeis'] ?? [];
 
-        if ($id <= 0 || empty($nome) || empty($email)) {
-            $_SESSION['error'] = 'Dados inválidos para atualização.';
+        try {
+            $this->usuarioService->atualizar($id, $_POST, $_POST['papeis'] ?? []);
+            $_SESSION['success'] = 'Usuário atualizado com sucesso!';
+            header('Location: /usuarios');
+            exit;
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: /usuarios/edit?id=' . $id);
+            exit;
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao atualizar usuário.';
             header('Location: /usuarios/edit?id=' . $id);
             exit;
         }
-
-        if (!empty($senha) && $senha !== $senhaConfirmacao) {
-            $_SESSION['error'] = 'As senhas não coincidem.';
-            header('Location: /usuarios/edit?id=' . $id);
-            exit;
-        }
-
-        $dados = [
-            'nome' => $nome,
-            'email' => $email,
-            'senha' => $senha,
-            'telefone' => $telefone,
-            'data_nascimento' => $dataNascimento
-        ];
-
-        $this->usuarioRepository->update($id, $dados, $papeis);
-
-        $_SESSION['success'] = 'Usuário atualizado com sucesso!';
-        header('Location: /usuarios');
-        exit;
     }
 
     public function destroy(): void
@@ -133,15 +99,13 @@ class UsuarioController
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
         $usuarioLogadoId = $_SESSION['usuario_id'] ?? 0;
 
-        if ($id === $usuarioLogadoId) {
-            $_SESSION['error'] = 'Você não pode excluir sua própria conta.';
-            header('Location: /usuarios');
-            exit;
-        }
-
-        if ($id > 0) {
-            $this->usuarioRepository->delete($id);
+        try {
+            $this->usuarioService->excluir($id, $usuarioLogadoId);
             $_SESSION['success'] = 'Usuário removido com sucesso!';
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao remover usuário.';
         }
 
         header('Location: /usuarios');
@@ -155,12 +119,7 @@ class UsuarioController
         $term = $_GET['q'] ?? '';
         $currentUsuarioId = isset($_GET['current_usuario_id']) ? (int) $_GET['current_usuario_id'] : null;
 
-        if (empty($term)) {
-            echo json_encode([]);
-            exit;
-        }
-
-        $usuarios = $this->usuarioRepository->autocompleteMotoristas($term, $currentUsuarioId);
+        $usuarios = $this->usuarioService->autocompleteMotoristas($term, $currentUsuarioId);
         echo json_encode($usuarios);
         exit;
     }

@@ -1,14 +1,16 @@
 <?php
 
+use Services\VeiculoService;
+
 class VeiculoController
 {
-    private PDO $pdo;
-    private VeiculoRepository $veiculoRepository;
+    private VeiculoService $veiculoService;
 
     public function __construct()
     {
-        $this->pdo = Database::conectar();
-        $this->veiculoRepository = new VeiculoRepository($this->pdo);
+        $pdo = Database::conectar();
+        $veiculoRepository = new VeiculoRepository($pdo);
+        $this->veiculoService = new VeiculoService($veiculoRepository);
     }
 
     public function index(): void
@@ -17,7 +19,7 @@ class VeiculoController
         $status = $_GET['status'] ?? null;
         $pagina = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 
-        $resultado = $this->veiculoRepository->paginate(10, $pagina, $search, $status);
+        $resultado = $this->veiculoService->listarPaginado($search, $status, $pagina, 10);
 
         view('veiculos.index', [
             'veiculos' => $resultado
@@ -31,35 +33,28 @@ class VeiculoController
 
     public function store(): void
     {
-        $descricao = $_POST['descricao'] ?? '';
-        $placa = $_POST['placa'] ?? '';
-        $numeroPassageiros = $_POST['numero_passageiros'] ?? 0;
-        $ativo = isset($_POST['ativo']) ? 1 : 0;
+        try {
+            $this->veiculoService->cadastrar($_POST);
 
-        if (empty($descricao) || empty($placa)) {
-            $_SESSION['error'] = 'Preencha todos os campos obrigatórios.';
+            $_SESSION['success'] = 'Veículo cadastrado com sucesso.';
+            header('Location: /veiculos');
+            exit;
+
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: /veiculos/create');
+            exit;
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao cadastrar veículo.';
             header('Location: /veiculos/create');
             exit;
         }
-
-        $dados = [
-            'descricao' => $descricao,
-            'placa' => $placa,
-            'numero_passageiros' => $numeroPassageiros,
-            'ativo' => $ativo
-        ];
-
-        $this->veiculoRepository->create($dados);
-
-        $_SESSION['success'] = 'Veículo cadastrado com sucesso.';
-        header('Location: /veiculos');
-        exit;
     }
 
     public function show(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        $veiculo = $this->veiculoRepository->findById($id);
+        $veiculo = $this->veiculoService->buscarPorId($id);
 
         if (!$veiculo) {
             $_SESSION['error'] = 'Veículo não encontrado.';
@@ -75,7 +70,7 @@ class VeiculoController
     public function edit(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        $veiculo = $this->veiculoRepository->findById($id);
+        $veiculo = $this->veiculoService->buscarPorId($id);
 
         if (!$veiculo) {
             $_SESSION['error'] = 'Veículo não encontrado.';
@@ -91,38 +86,36 @@ class VeiculoController
     public function update(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        $numeroPassageiros = $_POST['numero_passageiros'] ?? 0;
-        $descricao = $_POST['descricao'] ?? '';
-        $placa = $_POST['placa'] ?? '';
-        $ativo = isset($_POST['ativo']) ? 1 : 0;
 
-        if ($id <= 0 || empty($descricao) || empty($placa)) {
-            $_SESSION['error'] = 'Dados inválidos para atualização.';
+        try {
+            $this->veiculoService->atualizar($id, $_POST);
+
+            $_SESSION['success'] = 'Veículo atualizado com sucesso.';
+            header('Location: /veiculos');
+            exit;
+
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: /veiculos/edit?id=' . $id);
+            exit;
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao atualizar veículo.';
             header('Location: /veiculos/edit?id=' . $id);
             exit;
         }
-
-        $dados = [
-            'descricao' => $descricao,
-            'placa' => $placa,
-            'numero_passageiros' => $numeroPassageiros,
-            'ativo' => $ativo
-        ];
-
-        $this->veiculoRepository->update($id, $dados);
-
-        $_SESSION['success'] = 'Veículo atualizado com sucesso.';
-        header('Location: /veiculos');
-        exit;
     }
 
     public function destroy(): void
     {
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
-        if ($id > 0) {
-            $this->veiculoRepository->delete($id);
+        try {
+            $this->veiculoService->excluir($id);
             $_SESSION['success'] = 'Veículo removido com sucesso.';
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao remover veículo.';
         }
 
         header('Location: /veiculos');
@@ -136,12 +129,7 @@ class VeiculoController
         $term = $_GET['q'] ?? '';
         $currentVeiculoId = isset($_GET['current_id']) ? (int) $_GET['current_id'] : null;
 
-        if (empty($term)) {
-            echo json_encode([]);
-            exit;
-        }
-
-        $veiculos = $this->veiculoRepository->autocomplete($term, $currentVeiculoId);
+        $veiculos = $this->veiculoService->autocomplete($term, $currentVeiculoId);
         echo json_encode($veiculos);
         exit;
     }

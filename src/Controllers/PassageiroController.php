@@ -1,14 +1,16 @@
 <?php
 
+use Services\PassageiroService;
+
 class PassageiroController
 {
-    private PDO $pdo;
-    private PassageiroRepository $repository;
+    private PassageiroService $service;
 
     public function __construct()
     {
-        $this->pdo = Database::conectar();
-        $this->repository = new PassageiroRepository($this->pdo);
+        $pdo = Database::conectar();
+        $repository = new PassageiroRepository($pdo);
+        $this->service = new PassageiroService($repository);
     }
 
     public function index(): void
@@ -21,7 +23,7 @@ class PassageiroController
         $inscricao = $_GET['inscricao'] ?? null;
         $pagina = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 
-        $resultado = $this->repository->paginateDashboard($userId, 9, $pagina, $search, $dataInicio, $dataFim, $inscricao);
+        $resultado = $this->service->listarDashboard($userId, $search, $dataInicio, $dataFim, $inscricao, $pagina);
 
         view('dashboard', [
             'viagens' => $resultado
@@ -33,41 +35,42 @@ class PassageiroController
         $userId = $_SESSION['usuario_id'];
         $viagemId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
-        $viagem = $this->repository->findViagemDetalhes($viagemId);
+        try {
+            $dados = $this->service->buscarDetalhesViagem($viagemId, $userId);
 
-        if (!$viagem) {
-            $_SESSION['error'] = 'Viagem não encontrada.';
+            view('passageiros.selecionar-pontos', [
+                'viagem' => $dados['viagem'],
+                'passageiro' => $dados['passageiro']
+            ]);
+
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
             header('Location: /dashboard');
             exit;
         }
-
-        $passageiro = $this->repository->findInscricaoPassageiro($userId, $viagemId);
-
-        view('passageiros.selecionar-pontos', [
-            'viagem' => $viagem,
-            'passageiro' => $passageiro
-        ]);
     }
 
     public function salvarPontos(): void
     {
         $userId = $_SESSION['usuario_id'];
         $viagemId = isset($_POST['viagem_id']) ? (int) $_POST['viagem_id'] : 0;
-        
-        $pontoSaidaId = isset($_POST['ponto_de_parada_saida_id']) ? (int) $_POST['ponto_de_parada_saida_id'] : 0;
-        $pontoChegadaId = isset($_POST['ponto_de_parada_chegada_id']) ? (int) $_POST['ponto_de_parada_chegada_id'] : 0;
 
-        if (!$pontoSaidaId || !$pontoChegadaId) {
-            $_SESSION['error'] = 'Selecione os pontos de embarque e desembarque.';
+        try {
+            $this->service->salvarPontos($userId, $_POST);
+
+            $_SESSION['success'] = 'Sua vaga foi confirmada nesta viagem!';
+            header('Location: /dashboard');
+            exit;
+
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: /passageiros/selecionar-pontos?id=' . $viagemId);
+            exit;
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao confirmar a vaga na viagem.';
             header('Location: /passageiros/selecionar-pontos?id=' . $viagemId);
             exit;
         }
-
-        $this->repository->salvarPontosInscricao($userId, $viagemId, $pontoSaidaId, $pontoChegadaId);
-
-        $_SESSION['success'] = 'Sua vaga foi confirmada nesta viagem!';
-        header('Location: /dashboard');
-        exit;
     }
 
     public function cancelar(): void
@@ -75,9 +78,15 @@ class PassageiroController
         $userId = $_SESSION['usuario_id'];
         $viagemId = isset($_POST['id']) || isset($_GET['id']) ? (int) ($_POST['id'] ?? $_GET['id']) : 0;
 
-        $this->repository->cancelarInscricao($userId, $viagemId);
+        try {
+            $this->service->cancelarInscricao($userId, $viagemId);
+            $_SESSION['success'] = 'Sua participação foi cancelada.';
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao cancelar a participação.';
+        }
 
-        $_SESSION['success'] = 'Sua participação foi cancelada.';
         header('Location: /dashboard');
         exit;
     }
@@ -92,21 +101,11 @@ class PassageiroController
         $statusEmbarque = $_GET['status_embarque'] ?? null;
         $pagina = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 
-        $resultado = $this->repository->paginateHistorico($userId, 10, $pagina, $search, $dataInicio, $dataFim, $statusEmbarque);
-
-        // Recolhe todos os IDs de pontos de parada envolvidos para exibir descrições amigáveis
-        $pontosIds = [];
-        foreach ($resultado['data'] as $v) {
-            foreach ($v['passageiros'] as $p) {
-                if (!empty($p['pivot_ponto_de_parada_saida_id'])) $pontosIds[] = $p['pivot_ponto_de_parada_saida_id'];
-                if (!empty($p['pivot_ponto_de_parada_chegada_id'])) $pontosIds[] = $p['pivot_ponto_de_parada_chegada_id'];
-            }
-        }
-        $pontos = $this->repository->getDescricoesPontos(array_unique($pontosIds));
+        $dados = $this->service->listarHistorico($userId, $search, $dataInicio, $dataFim, $statusEmbarque, $pagina);
 
         view('passageiros.historico', [
-            'viagens' => $resultado,
-            'pontos' => $pontos
+            'viagens' => $dados['viagens'],
+            'pontos' => $dados['pontos']
         ]);
     }
 }
