@@ -13,68 +13,67 @@ class PortalMotoristaController
         $this->service = new PortalMotoristaService($repository);
     }
 
-    private function getUsuarioLogado(): array
+    /**
+     * Obtém os dados do usuário autenticado (já validado pelo Middleware).
+     */
+    private function getUsuarioAtual(): array
     {
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: /login');
-            exit;
-        }
-        return $_SESSION['usuario'];
-    }
-
-    private function checarMotoristaSeguro(): array
-    {
-        $user = $this->getUsuarioLogado();
-
-        try {
-            return $this->service->verificarMotorista($user);
-        } catch (\RuntimeException $e) {
-            if ($e->getCode() === 403) {
-                header('HTTP/1.1 403 Forbidden');
-                echo $e->getMessage();
-                exit;
-            }
-            throw $e;
-        } catch (\InvalidArgumentException $e) {
-            $_SESSION['error'] = $e->getMessage();
-            header('Location: /home');
-            exit;
-        }
+        return [
+            'id' => $_SESSION['usuario_id'] ?? 0,
+            'is_admin' => in_array('Administrador', $_SESSION['user_roles'] ?? []),
+            'role' => (in_array('Motorista', $_SESSION['user_roles'] ?? [])) ? 'motorista' : ''
+        ];
     }
 
     public function index(): void
     {
-        $motorista = $this->checarMotoristaSeguro();
-        $viagens = $this->service->listarViagensAtivas((int) $motorista['id']);
+        $user = $this->getUsuarioAtual();
 
-        view('portal_motorista.index', [
-            'viagens' => $viagens
-        ]);
+        try {
+            $motorista = $this->service->verificarMotorista($user);
+            $viagens = $this->service->listarViagensAtivas((int) $motorista['id']);
+
+            view('portal_motorista.index', [
+                'viagens' => $viagens
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: /dashboard');
+            exit;
+        }
     }
 
     public function historico(): void
     {
-        $motorista = $this->checarMotoristaSeguro();
-        
-        $search = $_GET['search'] ?? null;
-        $dataInicio = $_GET['data_inicio'] ?? null;
-        $dataFim = $_GET['data_fim'] ?? null;
-        $pagina = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+        $user = $this->getUsuarioAtual();
 
-        $resultado = $this->service->listarHistorico((int) $motorista['id'], $search, $dataInicio, $dataFim, $pagina);
+        try {
+            $motorista = $this->service->verificarMotorista($user);
+            
+            $search = $_GET['search'] ?? null;
+            $dataInicio = $_GET['data_inicio'] ?? null;
+            $dataFim = $_GET['data_fim'] ?? null;
+            $pagina = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 
-        view('portal_motorista.historico', [
-            'historico' => $resultado
-        ]);
+            $resultado = $this->service->listarHistorico((int) $motorista['id'], $search, $dataInicio, $dataFim, $pagina);
+
+            view('portal_motorista.historico', [
+                'historico' => $resultado
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: /dashboard');
+            exit;
+        }
     }
 
     public function show(): void
     {
-        $motorista = $this->checarMotoristaSeguro();
-        $user = $this->getUsuarioLogado();
+        $user = $this->getUsuarioAtual();
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
         
         try {
+            $motorista = $this->service->verificarMotorista($user);
             $viagem = $this->service->buscarDetalhesViagem($id, $motorista, $user);
 
             view('portal_motorista.show', [
@@ -96,11 +95,11 @@ class PortalMotoristaController
 
     public function iniciar(): void
     {
-        $motorista = $this->checarMotoristaSeguro();
-        $user = $this->getUsuarioLogado();
+        $user = $this->getUsuarioAtual();
         $id = isset($_POST['id']) || isset($_GET['id']) ? (int) ($_POST['id'] ?? $_GET['id']) : 0;
 
         try {
+            $motorista = $this->service->verificarMotorista($user);
             $this->service->iniciarViagem($id, $motorista, $user);
             $_SESSION['success'] = 'Viagem iniciada com sucesso!';
         } catch (\RuntimeException $e) {
@@ -119,11 +118,11 @@ class PortalMotoristaController
 
     public function finalizar(): void
     {
-        $motorista = $this->checarMotoristaSeguro();
-        $user = $this->getUsuarioLogado();
+        $user = $this->getUsuarioAtual();
         $id = isset($_POST['id']) || isset($_GET['id']) ? (int) ($_POST['id'] ?? $_GET['id']) : 0;
 
         try {
+            $motorista = $this->service->verificarMotorista($user);
             $this->service->finalizarViagem($id, $motorista, $user);
             $_SESSION['success'] = 'Viagem finalizada com sucesso!';
         } catch (\RuntimeException $e) {
@@ -142,11 +141,11 @@ class PortalMotoristaController
 
     public function imprimir(): void
     {
-        $motorista = $this->checarMotoristaSeguro();
-        $user = $this->getUsuarioLogado();
+        $user = $this->getUsuarioAtual();
         $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
         try {
+            $motorista = $this->service->verificarMotorista($user);
             $viagem = $this->service->buscarDetalhesViagem($id, $motorista, $user);
 
             view('portal_motorista.imprimir', [
