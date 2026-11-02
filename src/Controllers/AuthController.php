@@ -37,28 +37,41 @@ class AuthController
             header('Location: /login');
             exit;
         }
+
+        // 1. Buscar os papéis ativos do utilizador na base de dados
+        $stmtPapeis = $this->pdo->prepare("
+            SELECT p.descricao 
+            FROM papel p
+            JOIN usuario_papeis up ON p.id = up.papel_id
+            WHERE up.usuario_id = ? AND up.ativo = 1
+        ");
+        $stmtPapeis->execute([$usuario['id']]);
+        $papeis = $stmtPapeis->fetchAll(PDO::FETCH_COLUMN); // Retorna um array simples, ex: ['Passageiro', 'Admin']
     
-        // Dados que vão dentro do token
+        // 2. Dados que vão dentro do token (incluindo os papéis)
         $dadosPayload = [
             'id' => $usuario['id'],
             'nome' => $usuario['nome'],
-            'email' => $usuario['email']
+            'email' => $usuario['email'],
+            'papeis' => $papeis
         ];
     
         // Gera o JWT
         $jwtToken = JwtService::gerarToken($dadosPayload);
     
-        // Guarda o JWT num Cookie HTTP-only (seguro contra XSS)
+        // Guarda o JWT num Cookie HTTP-only
         setcookie('auth_token', $jwtToken, [
             'expires' => time() + (86400 * 7),
             'path' => '/',
-            'secure' => false,   // Colocar true se usar HTTPS em produção
-            'httponly' => true,  // Inacessível via JavaScript no browser
+            'secure' => false,   // true em produção com HTTPS
+            'httponly' => true,  
             'samesite' => 'Lax'
         ]);
     
-        // Mantém compatibilidade rápida com o resto do sistema se necessário
+        // 3. Guarda na sessão para acesso rápido e síncrono nas Views
         $_SESSION['usuario_id'] = $usuario['id'];
+        $_SESSION['user_name'] = $usuario['nome'];
+        $_SESSION['user_roles'] = $papeis; // Ex: ['Passageiro', 'Administrador']
     
         header('Location: /dashboard');
         exit;

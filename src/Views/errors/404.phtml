@@ -1,0 +1,44 @@
+<?php
+$title = 'Página Não Encontrada';
+?>
+
+<div class="text-center mb-6">
+    <h2 class="text-base font-bold text-slate-800">404 - Página Não Encontrada</h2>
+    <p class="text-xs text-slate-500 mt-1">A página que procura não existe, foi removida ou o endereço está incorreto.</p>
+</div>
+
+<!-- Alerta de Erro / Mensagem de Sessão -->
+<?php if(isset($_SESSION['error'])): ?>
+    <div class="mb-4 font-medium text-xs text-rose-600 bg-rose-50 border border-rose-200 p-3 rounded-xl">
+        <?= htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?>
+    </div>
+<?php endif; ?>
+
+<div class="space-y-4 text-center">
+    <!-- Ícone Simbólico de Busca / Não Encontrado -->
+    <div class="py-2 flex justify-center">
+        <div class="w-16 h-16 bg-indigo-50 border border-indigo-100 rounded-full flex items-center justify-center text-indigo-500 shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </div>
+    </div>
+
+    <p class="text-xs text-slate-600 px-2 leading-relaxed">
+        Verifique se o endereço (URL) digitado está correto ou retorne à página inicial para continuar a navegar pelo sistema.
+    </p>
+
+    <!-- Botão de Ação -->
+    <div class="pt-2">
+        <a href="/dashboard" class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl transition shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 cursor-pointer no-underline block">
+            <span>Voltar ao Início</span>
+        </a>
+    </div>
+
+    <div class="text-center pt-3 border-t border-slate-100 mt-4">
+        <p class="text-xs text-slate-500">
+            Acha que isto é um erro do sistema? 
+            <a href="/login" class="font-semibold text-indigo-600 hover:text-indigo-700 underline">Fazer login com outra conta</a>
+        </p>
+    </div>
+</div>

@@ -15,7 +15,8 @@
             "src/Config/"
         ],
         "files": [
-            "src/Helpers/view.php"
+            "src/Helpers/view.php",
+            "src/Helpers/role.php"
         ]
     }
 }

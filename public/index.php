@@ -197,6 +197,6 @@ switch ($uri) {
 
     default:
         http_response_code(404);
-        echo "Página não encontrada (404)";
+        view("errors/404", [], "layouts/auth");
         break;
 }
