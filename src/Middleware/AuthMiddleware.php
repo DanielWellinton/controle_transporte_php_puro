@@ -1,4 +1,5 @@
 <?php
+
 use Services\JwtService;
 
 class AuthMiddleware
@@ -9,36 +10,38 @@ class AuthMiddleware
             session_start();
         }
 
-        // 1. Tenta obter o token do Cookie ou do Header HTTP (para APIs/Fetch)
         $token = $_COOKIE['auth_token'] ?? null;
 
         if (!$token && isset($_SERVER['HTTP_AUTHORIZATION'])) {
-            $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
-            if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            if (preg_match('/Bearer\s(\S+)/', $_SERVER['HTTP_AUTHORIZATION'], $matches)) {
                 $token = $matches[1];
             }
         }
 
-        // 2. Se não houver token, bloqueia o acesso
         if (!$token) {
             self::falharAcesso();
         }
 
-        // 3. Valida o token JWT
         $dadosUsuario = JwtService::validarToken($token);
 
         if (!$dadosUsuario) {
             self::falharAcesso();
         }
 
-        // 4. Injeta os dados validados do utilizador na sessão para uso nos controladores
-        $_SESSION['usuario'] = $dadosUsuario;
-        $_SESSION['usuario_id'] = $dadosUsuario['id'];
+        if (empty($_SESSION['usuario_id'])) {
+            $_SESSION['usuario'] = $dadosUsuario;
+            $_SESSION['usuario_id'] = $dadosUsuario['id'] ?? $dadosUsuario['sub'] ?? null;
+        }
+
+        if (empty($_SESSION['usuario_id'])) {
+            self::falharAcesso();
+        }
     }
 
     private static function falharAcesso(): void
     {
-        // Se a requisição esperava JSON (ex: chamadas fetch/API), retorna JSON, senão redireciona
+        unset($_SESSION['usuario'], $_SESSION['usuario_id']);
+
         if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
             header('Content-Type: application/json', true, 401);
             echo json_encode(['success' => false, 'message' => 'Sessão expirada ou não autorizada.']);

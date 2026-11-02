@@ -1,5 +1,4 @@
 <?php
-
 class RoleMiddleware
 {
     /**
@@ -59,7 +58,7 @@ class RoleMiddleware
             }
 
         } catch (Exception $e) {
-            $_SESSION['error'] = 'Erro interno ao validar permissões.';
+            $_SESSION['error'] = 'Erro interno ao validar permissões: ' . $e->getMessage();
             view('errors.403', [], "layouts/auth");
             exit;
         }

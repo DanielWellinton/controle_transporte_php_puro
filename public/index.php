@@ -55,6 +55,8 @@ switch ($uri) {
     case '/passageiros/selecionar-pontos':
     case '/passageiros/cancelar':
     case '/passageiros/historico':
+    case '/passageiros/scanner':
+    case '/passageiros/scanner/validar':
         RoleMiddleware::check(['Passageiro', 'Admin']);
 
         switch ($uri) {
@@ -68,6 +70,8 @@ switch ($uri) {
                 break;
             case '/passageiros/cancelar': (new PassageiroController())->cancelar(); break;
             case '/passageiros/historico': (new PassageiroController())->historico(); break;
+            case '/passageiros/scanner': (new LeitorQrController())->exibirScanner(); break;
+            case '/passageiros/scanner/validar': (new LeitorQrController())->validarQrCode(); break;
         }
         break;
 

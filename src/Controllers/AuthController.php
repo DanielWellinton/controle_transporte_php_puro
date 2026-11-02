@@ -14,10 +14,14 @@ class AuthController
 
     public function showLogin(): void
     {
-        if (isset($_SESSION['usuario'])) {
-            header('Location: /dashboard');
-            exit;
+        if (isset($_SESSION['usuario_id']) || isset($_COOKIE['auth_token'])) {
+            // Opcional: Se quiseres validar rigorosamente se o token do cookie ainda é válido antes de redirecionar:
+            if (isset($_COOKIE['auth_token']) && JwtService::validarToken($_COOKIE['auth_token'])) {
+                header('Location: /dashboard');
+                exit;
+            }
         }
+        
         view('auth.login', [], 'layouts/auth');
     }
 

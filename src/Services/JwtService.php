@@ -37,7 +37,7 @@ class JwtService
             $decoded = JWT::decode($token, new Key(self::getSecretKey(), self::$encryptAlgorithm));
             return (array) $decoded->data;
         } catch (\Exception $e) {
-            return null; // Token inválido ou expirado
+            return null;
         }
     }
 }

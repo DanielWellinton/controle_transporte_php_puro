@@ -15,6 +15,8 @@ echo "🔍 IP local detectado: $LOCAL_IP"
 CERTS_DIR="./docker/nginx/certs"
 NGINX_CONF="./docker/nginx/default.conf"
 
+mkdir -p "$(dirname "$NGINX_CONF")"
+
 mkdir -p "$CERTS_DIR"
 
 echo "🧹 Limpando certificados antigos..."
