@@ -34,10 +34,10 @@ class PassageiroRepository
         }
 
         if ($inscricao === 'inscrito') {
-            $whereClauses[] = "EXISTS (SELECT 1 FROM passageiros p_sub WHERE p_sub.viagem_id = viagem.id AND p_sub.usuario_id = :user_id_inscrito)";
+            $whereClauses[] = "EXISTS (SELECT 1 FROM passageiro p_sub WHERE p_sub.viagem_id = viagem.id AND p_sub.usuario_id = :user_id_inscrito)";
             $params['user_id_inscrito'] = $userId;
         } elseif ($inscricao === 'nao_inscrito') {
-            $whereClauses[] = "NOT EXISTS (SELECT 1 FROM passageiros p_sub WHERE p_sub.viagem_id = viagem.id AND p_sub.usuario_id = :user_id_nao_inscrito)";
+            $whereClauses[] = "NOT EXISTS (SELECT 1 FROM passageiro p_sub WHERE p_sub.viagem_id = viagem.id AND p_sub.usuario_id = :user_id_nao_inscrito)";
             $params['user_id_nao_inscrito'] = $userId;
         }
 
@@ -128,7 +128,7 @@ class PassageiroRepository
      */
     public function findInscricaoPassageiro(int $userId, int $viagemId): ?array
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM passageiros WHERE usuario_id = :user_id AND viagem_id = :viagem_id LIMIT 1");
+        $stmt = $this->pdo->prepare("SELECT * FROM passageiro WHERE usuario_id = :user_id AND viagem_id = :viagem_id LIMIT 1");
         $stmt->execute(['user_id' => $userId, 'viagem_id' => $viagemId]);
         $res = $stmt->fetch(PDO::FETCH_ASSOC);
         return $res ?: null;
@@ -142,7 +142,7 @@ class PassageiroRepository
         $existente = $this->findInscricaoPassageiro($userId, $viagemId);
 
         if ($existente) {
-            $stmt = $this->pdo->prepare("UPDATE passageiros 
+            $stmt = $this->pdo->prepare("UPDATE passageiro 
                                          SET ponto_de_parada_saida_id = :saida, 
                                              ponto_de_parada_chegada_id = :chegada, 
                                              updated_at = NOW() 
@@ -154,7 +154,7 @@ class PassageiroRepository
                 'viagem_id' => $viagemId
             ]);
         } else {
-            $stmt = $this->pdo->prepare("INSERT INTO passageiros (usuario_id, viagem_id, ponto_de_parada_saida_id, ponto_de_parada_chegada_id, data_hora_saida, created_at, updated_at) 
+            $stmt = $this->pdo->prepare("INSERT INTO passageiro (usuario_id, viagem_id, ponto_de_parada_saida_id, ponto_de_parada_chegada_id, data_hora_saida, created_at, updated_at) 
                                          VALUES (:user_id, :viagem_id, :saida, :chegada, NULL, NOW(), NOW())");
             $stmt->execute([
                 'user_id' => $userId,
@@ -170,7 +170,7 @@ class PassageiroRepository
      */
     public function cancelarInscricao(int $userId, int $viagemId): bool
     {
-        $stmt = $this->pdo->prepare("DELETE FROM passageiros WHERE usuario_id = :user_id AND viagem_id = :viagem_id");
+        $stmt = $this->pdo->prepare("DELETE FROM passageiro WHERE usuario_id = :user_id AND viagem_id = :viagem_id");
         return $stmt->execute(['user_id' => $userId, 'viagem_id' => $viagemId]);
     }
 
@@ -207,7 +207,7 @@ class PassageiroRepository
         $whereSql = "WHERE " . implode(" AND ", $whereClauses);
 
         $sqlBase = "FROM viagem viagem
-                    JOIN passageiros p_hist ON viagem.id = p_hist.viagem_id
+                    JOIN passageiro p_hist ON viagem.id = p_hist.viagem_id
                     JOIN rota r ON viagem.rota_id = r.id
                     JOIN motorista m ON viagem.motorista_id = m.id
                     JOIN usuario u_mot ON m.usuario_id = u_mot.id
@@ -273,7 +273,7 @@ class PassageiroRepository
                        p.data_hora_saida as pivot_data_hora_saida, 
                        p.ponto_de_parada_chegada_id as pivot_ponto_de_parada_chegada_id,
                        p.data_hora_chegada as pivot_data_hora_chegada 
-                FROM passageiros p 
+                FROM passageiro p 
                 JOIN usuario u ON p.usuario_id = u.id 
                 WHERE p.viagem_id = :viagem_id";
         $stmt = $this->pdo->prepare($sql);

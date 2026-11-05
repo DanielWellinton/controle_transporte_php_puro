@@ -90,7 +90,7 @@ class PortalMotoristaRepository
                        r.descricao as rota_descricao, 
                        v.descricao as veiculo_descricao, 
                        v.placa as veiculo_placa,
-                       (SELECT COUNT(*) FROM passageiros p WHERE p.viagem_id = viagem.id AND p.data_hora_saida IS NOT NULL) as embarcados_count
+                       (SELECT COUNT(*) FROM passageiro p WHERE p.viagem_id = viagem.id AND p.data_hora_saida IS NOT NULL) as embarcados_count
                 {$sqlBase}
                 ORDER BY viagem.data_hora_chegada DESC 
                 LIMIT :limit OFFSET :offset";
@@ -161,7 +161,7 @@ class PortalMotoristaRepository
             $stmtViagem->execute(['id' => $viagemId]);
 
             // 2. Registra o desembarque apenas de quem embarcou e não desembarcou
-            $stmtPassageiros = $this->pdo->prepare("UPDATE passageiros 
+            $stmtPassageiros = $this->pdo->prepare("UPDATE passageiro 
                                                     SET data_hora_chegada = NOW(), updated_at = NOW() 
                                                     WHERE viagem_id = :viagem_id 
                                                       AND data_hora_saida IS NOT NULL 
@@ -190,7 +190,7 @@ class PortalMotoristaRepository
     private function getPassageirosByViagem(int $viagemId): array
     {
         $sql = "SELECT u.*, p.data_hora_saida as pivot_data_hora_saida, p.data_hora_chegada as pivot_data_hora_chegada 
-                FROM passageiros p 
+                FROM passageiro p 
                 JOIN usuario u ON p.usuario_id = u.id 
                 WHERE p.viagem_id = :viagem_id";
         $stmt = $this->pdo->prepare($sql);
