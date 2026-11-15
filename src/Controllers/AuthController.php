@@ -16,7 +16,7 @@ class AuthController
 
     public function showLogin(): void
     {
-        if (isset($_SESSION['usuario_id']) || isset($_COOKIE['auth_token'])) {
+        if (isset($_SESSION['usuario_id']) && isset($_COOKIE['auth_token'])) {
             if (isset($_COOKIE['auth_token']) && JwtService::validarToken($_COOKIE['auth_token'])) {
                 header('Location: /dashboard');
                 exit;

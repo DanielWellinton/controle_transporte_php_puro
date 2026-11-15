@@ -10,6 +10,12 @@ class AuthMiddleware
             session_start();
         }
 
+        // 1. Se já existe uma sessão ativa com o ID do usuário, o acesso é liberado imediatamente
+        if (!empty($_SESSION['usuario_id'])) {
+            return;
+        }
+
+        // 2. Caso contrário, tenta validar via Cookie JWT / Bearer
         $token = $_COOKIE['auth_token'] ?? null;
 
         if (!$token && isset($_SERVER['HTTP_AUTHORIZATION'])) {
@@ -28,10 +34,9 @@ class AuthMiddleware
             self::falharAcesso();
         }
 
-        if (empty($_SESSION['usuario_id'])) {
-            $_SESSION['usuario'] = $dadosUsuario;
-            $_SESSION['usuario_id'] = $dadosUsuario['id'] ?? $dadosUsuario['sub'] ?? null;
-        }
+        // Restaura os dados na sessão a partir do token válido
+        $_SESSION['usuario_id'] = $dadosUsuario['id'] ?? $dadosUsuario['usuario_id'] ?? $dadosUsuario['sub'] ?? null;
+        $_SESSION['usuario'] = $dadosUsuario;
 
         if (empty($_SESSION['usuario_id'])) {
             self::falharAcesso();
