@@ -92,3 +92,8 @@ Em seguida, aceda ao sistema através do endereço IP da sua máquina na rede lo
 ```text
 https://192.168.X.X
 ```
+
+## 📱 Atualizar o composer
+```bash
+docker-compose exec app composer dump-autoload -o
+```
