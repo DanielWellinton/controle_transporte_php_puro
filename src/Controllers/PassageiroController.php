@@ -67,7 +67,7 @@ class PassageiroController
             header('Location: /passageiros/selecionar-pontos?id=' . $viagemId);
             exit;
         } catch (\Exception $e) {
-            $_SESSION['error'] = 'Erro ao confirmar a vaga na viagem.';
+            $_SESSION['error'] = 'Erro ao confirmar a vaga na viagem. ' . $e->getMessage();
             header('Location: /passageiros/selecionar-pontos?id=' . $viagemId);
             exit;
         }

@@ -4,7 +4,7 @@ $headerTitle = 'Editar Usuário';
 
 // Extração segura dos dados do usuário injetados pelo Controller
 $idUsuario = $usuario['id'] ?? '';
-$nomeUsuario = $usuario['nome'] ?? $usuario['name'] ?? '';
+$nomeUsuario = $usuario['nome'] ?? $usuario['nome'] ?? '';
 $emailUsuario = $usuario['email'] ?? '';
 $telefoneUsuario = $usuario['telefone'] ?? '';
 $dataNascimentoUsuario = isset($usuario['data_nascimento']) && $usuario['data_nascimento'] ? date('Y-m-d', strtotime($usuario['data_nascimento'])) : '';

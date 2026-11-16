@@ -4,8 +4,8 @@ class Passageiro extends Model
 {
     private int $id;
     private Viagem $viagem;
-    private DateTime $dataHoraSaida;
-    private DateTime $dataHoraChegada;
+    private ?DateTime $dataHoraSaida = null;
+    private ?DateTime $dataHoraChegada = null;
     private RotaPontoDeParada $pontoDeParadaSaida;
     private RotaPontoDeParada $pontoDeParadaChegada;
     private Usuario $usuario;
@@ -30,22 +30,22 @@ class Passageiro extends Model
         $this->viagem = $viagem;
     }
 
-    public function getDataHoraSaida(): DateTime
+    public function getDataHoraSaida(): ?DateTime
     {
         return $this->dataHoraSaida;
     }
 
-    public function setDataHoraSaida(DateTime $dataHoraSaida): void
+    public function setDataHoraSaida(?DateTime $dataHoraSaida): void
     {
         $this->dataHoraSaida = $dataHoraSaida;
     }
 
-    public function getDataHoraChegada(): DateTime
+    public function getDataHoraChegada(): ?DateTime
     {
         return $this->dataHoraChegada;
     }
 
-    public function setDataHoraChegada(DateTime $dataHoraChegada): void
+    public function setDataHoraChegada(?DateTime $dataHoraChegada): void
     {
         $this->dataHoraChegada = $dataHoraChegada;
     }

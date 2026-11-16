@@ -135,7 +135,7 @@ $diferenca = $totalAgendados - $totalEmbarcados;
                         </tr>
                     <?php else: ?>
                         <?php foreach($passageiros as $passageiro): 
-                            $pNome = $passageiro['name'] ?? 'N/A';
+                            $pNome = $passageiro['nome'] ?? 'N/A';
                             $pTelefone = $passageiro['telefone'] ?? 'Sem telefone';
                             $pSaidaRaw = $passageiro['pivot_data_hora_saida'] ?? null;
                             $pChegadaRaw = $passageiro['pivot_data_hora_chegada'] ?? null;

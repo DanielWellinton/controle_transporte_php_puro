@@ -8,7 +8,7 @@ $cnh = $motorista['cnh'] ?? '';
 $dataValidade = isset($motorista['data_validade_cnh']) ? date('d/m/Y', strtotime($motorista['data_validade_cnh'])) : '-';
 $ativo = (bool) ($motorista['ativo'] ?? true);
 
-$nomeUsuario = $motorista['usuario_nome'] ?? $motorista['usuario']['name'] ?? 'N/A';
+$nomeUsuario = $motorista['usuario_nome'] ?? $motorista['usuario']['nome'] ?? 'N/A';
 $emailUsuario = $motorista['usuario_email'] ?? $motorista['usuario']['email'] ?? 'N/A';
 $iniciais = strtoupper(substr($nomeUsuario, 0, 2));
 ?>

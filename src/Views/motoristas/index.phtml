@@ -76,7 +76,7 @@ $temFiltros = !empty($searchQuery) || $statusQuery !== '';
         <?php if (!empty($listaMotoristas)): ?>
             <?php foreach ($listaMotoristas as $motorista): ?>
                 <?php 
-                $nomeUsuario = $motorista['usuario_nome'] ?? $motorista['usuario']['name'] ?? 'N/A';
+                $nomeUsuario = $motorista['usuario_nome'] ?? $motorista['usuario']['nome'] ?? 'N/A';
                 $iniciais = strtoupper(substr($nomeUsuario, 0, 2));
                 $ativo = (bool) $motorista['ativo'];
                 $dataValidade = isset($motorista['data_validade_cnh']) ? date('d/m/Y', strtotime($motorista['data_validade_cnh'])) : '-';
@@ -147,7 +147,7 @@ $temFiltros = !empty($searchQuery) || $statusQuery !== '';
                     <?php if (!empty($listaMotoristas)): ?>
                         <?php foreach ($listaMotoristas as $motorista): ?>
                             <?php 
-                            $nomeUsuario = $motorista['usuario_nome'] ?? $motorista['usuario']['name'] ?? 'N/A';
+                            $nomeUsuario = $motorista['usuario_nome'] ?? $motorista['usuario']['nome'] ?? 'N/A';
                             $iniciais = strtoupper(substr($nomeUsuario, 0, 2));
                             $ativo = (bool) $motorista['ativo'];
                             $dataValidade = isset($motorista['data_validade_cnh']) ? date('d/m/Y', strtotime($motorista['data_validade_cnh'])) : '-';

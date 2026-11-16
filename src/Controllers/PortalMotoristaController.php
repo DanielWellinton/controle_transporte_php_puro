@@ -86,6 +86,9 @@ class PortalMotoristaController
                 echo $e->getMessage();
                 exit;
             }
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: /portal-motorista');
+            exit;
         } catch (\InvalidArgumentException $e) {
             $_SESSION['error'] = $e->getMessage();
             header('Location: /portal-motorista');

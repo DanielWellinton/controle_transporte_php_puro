@@ -56,7 +56,7 @@ class AuthService
 
     public function registar(array $dados): void
     {
-        $nome = trim($dados['name'] ?? '');
+        $nome = trim($dados['nome'] ?? '');
         $email = trim($dados['email'] ?? '');
         $senha = $dados['password'] ?? '';
         $senhaConf = $dados['password_confirmation'] ?? '';

@@ -166,12 +166,12 @@ document.addEventListener('DOMContentLoaded', function () {
                             const option = document.createElement('div');
                             option.className = 'p-3 hover:bg-indigo-50 cursor-pointer transition flex flex-col gap-0.5 text-xs text-slate-700';
                             option.innerHTML = `
-                                <span class="font-bold text-slate-800">${item.name}</span>
+                                <span class="font-bold text-slate-800">${item.nome}</span>
                                 <span class="text-slate-400 text-[11px]">${item.email}</span>
                             `;
 
                             option.addEventListener('click', function () {
-                                const label = `${item.name} (${item.email})`;
+                                const label = `${item.nome} (${item.email})`;
                                 searchInput.value = label;
                                 hiddenIdInput.value = item.id;
                                 hiddenNameInput.value = label;

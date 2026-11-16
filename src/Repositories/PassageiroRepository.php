@@ -154,7 +154,7 @@ class PassageiroRepository
                 'viagem_id' => $viagemId
             ]);
         } else {
-            $stmt = $this->pdo->prepare("INSERT INTO passageiro (usuario_id, viagem_id, ponto_de_parada_saida_id, ponto_de_parada_chegada_id, data_hora_saida, created_at, updated_at) 
+            $stmt = $this->pdo->prepare("INSERT INTO passageiro (usuario_id, viagem_id, ponto_de_parada_saida_id, ponto_de_parada_chegada_id, data_hora_saida, criado_at, atualizado_at) 
                                          VALUES (:user_id, :viagem_id, :saida, :chegada, NULL, NOW(), NOW())");
             $stmt->execute([
                 'user_id' => $userId,

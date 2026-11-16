@@ -185,7 +185,7 @@ $passageiros = $viagem['passageiros'] ?? [];
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-xs">
                     <?php foreach ($passageiros as $passageiro): 
-                        $pNome = $passageiro['name'] ?? 'N/A';
+                        $pNome = $passageiro['nome'] ?? 'N/A';
                         $pEmail = $passageiro['email'] ?? '';
                         $pSaida = !empty($passageiro['pivot_data_hora_saida']) ? date('d/m/Y H:i', strtotime($passageiro['pivot_data_hora_saida'])) : '-';
                         $pChegada = !empty($passageiro['pivot_data_hora_chegada']) ? date('d/m/Y H:i', strtotime($passageiro['pivot_data_hora_chegada'])) : '-';

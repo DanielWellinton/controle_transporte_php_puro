@@ -234,7 +234,7 @@ class UsuarioRepository
 
     public function autocompleteMotoristas(string $term, ?int $currentUsuarioId = null): array
     {
-        $sql = "SELECT u.id, u.nome as name, u.email FROM usuario u
+        $sql = "SELECT u.id, u.nome, u.email FROM usuario u
                 JOIN usuario_papeis up ON u.id = up.usuario_id
                 JOIN papel p ON up.papel_id = p.id
                 WHERE p.descricao = 'Motorista'

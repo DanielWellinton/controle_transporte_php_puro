@@ -120,7 +120,7 @@ class PortalMotoristaRepository
         $sql = "SELECT viagem.*, 
                        r.descricao as rota_descricao, 
                        m.id as motorista_id_rel,
-                       u.name as motorista_nome,
+                       u.nome as motorista_nome,
                        v.descricao as veiculo_descricao, 
                        v.placa as veiculo_placa
                 FROM viagem viagem
@@ -189,10 +189,19 @@ class PortalMotoristaRepository
 
     private function getPassageirosByViagem(int $viagemId): array
     {
-        $sql = "SELECT u.*, p.data_hora_saida as pivot_data_hora_saida, p.data_hora_chegada as pivot_data_hora_chegada 
+        $sql = "SELECT u.*, 
+                       p.ponto_de_parada_saida_id as pivot_ponto_de_parada_saida_id,
+                       p.data_hora_saida as pivot_data_hora_saida, 
+                       p.ponto_de_parada_chegada_id as pivot_ponto_de_parada_chegada_id,
+                       p.data_hora_chegada as pivot_data_hora_chegada,
+                       ps.descricao as ponto_saida_descricao,
+                       pc.descricao as ponto_chegada_descricao
                 FROM passageiro p 
                 JOIN usuario u ON p.usuario_id = u.id 
+                JOIN ponto_de_parada ps ON p.ponto_de_parada_saida_id = ps.id
+                JOIN ponto_de_parada pc ON p.ponto_de_parada_chegada_id = pc.id
                 WHERE p.viagem_id = :viagem_id";
+
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute(['viagem_id' => $viagemId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
