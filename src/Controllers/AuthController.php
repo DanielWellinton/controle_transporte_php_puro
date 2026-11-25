@@ -93,7 +93,7 @@ class AuthController
             header('Location: /register');
             exit;
         } catch (\Exception $e) {
-            $_SESSION['error'] = 'Erro ao registar a conta.';
+            $_SESSION['error'] = 'Erro ao registar a conta.'.$e->getMessage();
             header('Location: /register');
             exit;
         }

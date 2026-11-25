@@ -13,7 +13,8 @@
             "src/Repositories/",
             "src/Middleware/",
             "src/Services/",
-            "src/Config/"
+            "src/Config/",
+            "database/seeds/"
         ],
         "files": [
             "src/Helpers/view.php",
