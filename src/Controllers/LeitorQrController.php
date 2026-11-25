@@ -8,8 +8,7 @@ class LeitorQrController
     public function exibirScanner(): void
     {
         // Podes renderizar a view do scanner respetiva
-        $title = 'Scanner de QR Code';
-        require_once __DIR__ . '/../Views/passageiros/scanner.php';
+        view('passageiros.scanner');
     }
 
     /**

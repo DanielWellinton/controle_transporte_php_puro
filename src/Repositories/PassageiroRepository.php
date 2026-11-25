@@ -145,7 +145,7 @@ class PassageiroRepository
             $stmt = $this->pdo->prepare("UPDATE passageiro 
                                          SET ponto_de_parada_saida_id = :saida, 
                                              ponto_de_parada_chegada_id = :chegada, 
-                                             updated_at = NOW() 
+                                             atualizado_at = NOW() 
                                          WHERE usuario_id = :user_id AND viagem_id = :viagem_id");
             $stmt->execute([
                 'saida' => $pontoSaidaId,

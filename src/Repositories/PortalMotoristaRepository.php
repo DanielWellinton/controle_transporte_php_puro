@@ -162,7 +162,7 @@ class PortalMotoristaRepository
 
             // 2. Registra o desembarque apenas de quem embarcou e não desembarcou
             $stmtPassageiros = $this->pdo->prepare("UPDATE passageiro 
-                                                    SET data_hora_chegada = NOW(), updated_at = NOW() 
+                                                    SET data_hora_chegada = NOW(), atualizado_at = NOW() 
                                                     WHERE viagem_id = :viagem_id 
                                                       AND data_hora_saida IS NOT NULL 
                                                       AND data_hora_chegada IS NULL");
