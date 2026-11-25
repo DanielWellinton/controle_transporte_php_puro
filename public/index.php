@@ -14,6 +14,10 @@ if ($uri === '') $uri = '/';
 
 switch ($uri) {
 
+    case '/':
+        header('Location: /login');
+        exit;
+
     // --- ROTAS DE AUTH (Públicas) ---
     case '/login':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
