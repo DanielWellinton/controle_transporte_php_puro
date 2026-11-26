@@ -122,6 +122,10 @@ docker-compose exec app php bin/console migrate:list
 Após subir as migrações, popule o banco de dados executando os scripts abaixo na ordem indicada para respeitar os relacionamentos entre as tabelas:
 
 ```bash
+#Para poder rodar todas as seeds de uma vez só:
+docker-compose exec app php database/seeds/DataBaseSeeder.php
+
+#Para poder rodar seed por seed de cada vez:
 docker-compose exec app php database/seeds/UsuarioSeed.php
 docker-compose exec app php database/seeds/MotoristaSeed.php
 docker-compose exec app php database/seeds/VeiculoSeed.php
