@@ -231,59 +231,67 @@ $passageiros = $viagem['passageiros'] ?? [];
             shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
         });
 
-        const map = L.map('map').setView([-23.550520, -46.633309], 13);
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; OpenStreetMap'
-        }).addTo(map);
+const map = L.map('map').setView([-27.0233387, -50.9118462], 13);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap'
+}).addTo(map);
 
-        const pontos = JSON.parse(mapElement.dataset.pontos || '[]');
-        if (pontos.length === 0) return;
+const pontos = JSON.parse(mapElement.dataset.pontos || '[]');
+if (pontos.length === 0) return;
 
-        pontos.forEach((ponto, index) => {
-            const customIcon = L.divIcon({
-                className: 'custom-div-icon',
-                html: `<div style="background-color: #4f46e5; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${index + 1}</div>`,
-                iconSize: [28, 28],
-                iconAnchor: [14, 14]
-            });
+const markers = [];
 
-            L.marker([ponto.lat, ponto.lng], { icon: customIcon })
-                .addTo(map)
-                .bindPopup(`<b>Parada ${index + 1}: ${ponto.descricao}</b>`);
-        });
+pontos.forEach((ponto, index) => {
+    const customIcon = L.divIcon({
+        className: 'custom-div-icon',
+        html: `<div style="background-color: #4f46e5; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${index + 1}</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+    });
 
-        if (pontos.length >= 2) {
-            const coordinatesStr = pontos.map(p => `${p.lng},${p.lat}`).join(';');
-            const url = `https://router.project-osrm.org/route/v1/driving/${coordinatesStr}?overview=full&geometries=geojson`;
+    const marker = L.marker([ponto.lat, ponto.lng], { icon: customIcon })
+        .addTo(map)
+        .bindPopup(`<b>Parada ${index + 1}: ${ponto.descricao}</b>`);
 
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.routes && data.routes.length > 0) {
-                        const route = data.routes[0];
-                        const routeCoordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+    markers.push(marker);
+});
 
-                        const polyline = L.polyline(routeCoordinates, {
-                            color: '#4f46e5',
-                            weight: 5,
-                            opacity: 0.8
-                        }).addTo(map);
+// Foca imediatamente na área que engloba todos os pontos da rota
+if (markers.length >= 2) {
+    const grupoMarcadores = L.featureGroup(markers);
+    map.fitBounds(grupoMarcadores.getBounds(), { padding: [40, 40] });
 
-                        map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
+    const coordinatesStr = pontos.map(p => `${p.lng},${p.lat}`).join(';');
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordinatesStr}?overview=full&geometries=geojson`;
 
-                        if (distanciaInfo) {
-                            const distanciaKm = (route.distance / 1000).toFixed(1);
-                            distanciaInfo.textContent = `Distância Total: ${distanciaKm} km`;
-                            distanciaInfo.classList.remove('hidden');
-                        }
-                    }
-                })
-                .catch(err => console.error("Erro ao carregar rota OSRM:", err));
-        } else {
-            map.setView([pontos[0].lat, pontos[0].lng], 15);
-        }
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.routes && data.routes.length > 0) {
+                const route = data.routes[0];
+                const routeCoordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
 
-        setTimeout(() => map.invalidateSize(), 300);
+                const polyline = L.polyline(routeCoordinates, {
+                    color: '#4f46e5',
+                    weight: 5,
+                    opacity: 0.8
+                }).addTo(map);
+
+                map.fitBounds(polyline.getBounds(), { padding: [40, 40] });
+
+                if (distanciaInfo) {
+                    const distanciaKm = (route.distance / 1000).toFixed(1);
+                    distanciaInfo.textContent = `Distância Total: ${distanciaKm} km`;
+                    distanciaInfo.classList.remove('hidden');
+                }
+            }
+        })
+        .catch(err => console.error("Erro ao carregar rota OSRM:", err));
+} else {
+    map.setView([pontos[0].lat, pontos[0].lng], 15);
+}
+
+setTimeout(() => map.invalidateSize(), 300);
     });
 </script>
