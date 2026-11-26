@@ -17,8 +17,8 @@ class MotoristaSeed
 
             [
                 'dados' => [
-                    'descricao' => '1',
-                    'placa' => '132457689',
+                    'usuario_id' => '1',
+                    'cnh' => '132457689',
                     'data_validade_cnh' => '2030-12-31',
                     'ativo' => '1',
                 ],
