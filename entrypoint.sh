@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Se a pasta vendor nÃ£o existir, instala as dependÃªncias automaticamente
+# Se a pasta vendor nÃƒÂ£o existir, instala as dependÃƒÂªncias automaticamente
 if [ ! -d "vendor" ] || [ ! -f "vendor/autoload.php" ]; then
-    echo "A instalar dependÃªncias do Composer automaticamente..."
+    echo "A instalar dependÃƒÂªncias do Composer automaticamente..."
     composer install --no-interaction --optimize-autoloader
 fi
 
-# Continua a execuÃ§Ã£o normal do container (php-fpm)
+# Continua a execuÃƒÂ§ÃƒÂ£o normal do container (php-fpm)
 exec "$@"

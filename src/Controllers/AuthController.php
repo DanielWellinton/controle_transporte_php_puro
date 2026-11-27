@@ -43,8 +43,14 @@ class AuthController
                 'samesite' => 'Lax'
             ]);
 
-            // Guarda dados essenciais na sessão
+            // Guarda dados essenciais na sessão (padronizado com AuthMiddleware)
             $_SESSION['usuario_id'] = $resultado['usuario']['id'];
+            $_SESSION['usuario'] = [
+                'id' => $resultado['usuario']['id'],
+                'nome' => $resultado['usuario']['nome'],
+                'email' => $resultado['usuario']['email'],
+                'papeis' => $resultado['papeis']
+            ];
             $_SESSION['user_name'] = $resultado['usuario']['nome'];
             $_SESSION['user_roles'] = $resultado['papeis'];
 
@@ -93,7 +99,7 @@ class AuthController
             header('Location: /register');
             exit;
         } catch (\Exception $e) {
-            $_SESSION['error'] = 'Erro ao registar a conta.';
+            $_SESSION['error'] = 'Erro ao registar a conta.'.$e->getMessage();
             header('Location: /register');
             exit;
         }

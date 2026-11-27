@@ -82,27 +82,55 @@ class ViagemRepository
     }
 
     public function findById(int $id): ?array
-    {
-        $sql = "SELECT viagem.*, 
-                       r.descricao as rota_descricao, 
-                       u.nome as motorista_nome, 
-                       v.descricao as veiculo_descricao, 
-                       v.placa as veiculo_placa,
-                       v.numero_passageiros as veiculo_capacidade
-                FROM viagem viagem
-                JOIN rota r ON viagem.rota_id = r.id
-                JOIN motorista m ON viagem.motorista_id = m.id
-                JOIN usuario u ON m.usuario_id = u.id
-                JOIN veiculo v ON viagem.veiculo_id = v.id
-                WHERE viagem.id = :id 
-                LIMIT 1";
-        
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(['id' => $id]);
-        $viagem = $stmt->fetch(PDO::FETCH_ASSOC);
+{
+    $sql = "SELECT viagem.*, 
+                   r.descricao as rota_descricao, 
+                   u.nome as motorista_nome, 
+                   v.descricao as veiculo_descricao, 
+                   v.placa as veiculo_placa,
+                   v.numero_passageiros as veiculo_capacidade
+            FROM viagem viagem
+            JOIN rota r ON viagem.rota_id = r.id
+            JOIN motorista m ON viagem.motorista_id = m.id
+            JOIN usuario u ON m.usuario_id = u.id
+            JOIN veiculo v ON viagem.veiculo_id = v.id
+            WHERE viagem.id = :id 
+            LIMIT 1";
+    
+    $stmt = $this->pdo->prepare($sql);
+    $stmt->execute(['id' => $id]);
+    $viagem = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return $viagem ?: null;
+    if (!$viagem) {
+        return null;
     }
+
+    // Carrega os pontos de parada ativos da rota ordenados pela sequência
+    $sqlPontos = "SELECT p.*, rpp.ordem, rpp.ativo AS pivot_ativo
+                  FROM ponto_de_parada p
+                  JOIN rota_ponto_de_parada rpp ON p.id = rpp.ponto_de_parada_id
+                  WHERE rpp.rota_id = :rota_id
+                    AND rpp.ativo = 1
+                    AND p.ativo = 1
+                  ORDER BY rpp.ordem ASC";
+    $stmtPontos = $this->pdo->prepare($sqlPontos);
+    $stmtPontos->execute(['rota_id' => $viagem['rota_id']]);
+    $viagem['pontos_rota'] = $stmtPontos->fetchAll(PDO::FETCH_ASSOC);
+
+    // Carrega os passageiros vinculados à viagem
+    $sqlPassageiros = "SELECT u.nome, u.email, 
+                              pass.data_hora_saida AS pivot_data_hora_saida, 
+                              pass.data_hora_chegada AS pivot_data_hora_chegada
+                       FROM passageiro pass
+                       JOIN usuario u ON pass.usuario_id = u.id
+                       WHERE pass.viagem_id = :viagem_id
+                       ORDER BY u.nome ASC";
+    $stmtPass = $this->pdo->prepare($sqlPassageiros);
+    $stmtPass->execute(['viagem_id' => $id]);
+    $viagem['passageiros'] = $stmtPass->fetchAll(PDO::FETCH_ASSOC);
+
+    return $viagem;
+}
 
     public function create(array $dados): int
     {

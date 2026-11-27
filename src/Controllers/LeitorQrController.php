@@ -50,26 +50,43 @@ class LeitorQrController
         try {
             $pdo = Database::conectar();
 
-            // 1. Busca a viagem pelo QR Code
-            $stmtViagem = $pdo->prepare("SELECT id, ativo FROM viagem WHERE codigo_qr = ? LIMIT 1");
+            // 1. Busca a viagem pelo QR Code e verifica se data_hora_saida já chegou/passou no relógio do banco
+            $stmtViagem = $pdo->prepare("
+                SELECT 
+                    id, 
+                    ativo, 
+                    (data_hora_saida <= NOW()) AS viagem_iniciada 
+                FROM viagem 
+                WHERE codigo_qr = ? 
+                LIMIT 1
+            ");
             $stmtViagem->execute([$codigoQr]);
             $viagem = $stmtViagem->fetch(PDO::FETCH_ASSOC);
 
             if (!$viagem) {
+                http_response_code(404);
                 echo json_encode([
                     'success' => false,
                     'message' => 'QR Code inválido ou viagem não encontrada.'
                 ]);
-                http_response_code(404);
                 exit;
             }
 
             if (empty($viagem['ativo']) || $viagem['ativo'] == 0) {
+                http_response_code(422);
                 echo json_encode([
                     'success' => false,
-                    'message' => 'Esta viagem não está mais ativa.'
+                    'message' => 'Esta viagem já foi finalizada ou não está mais ativa.'
                 ]);
+                exit;
+            }
+
+            if (empty($viagem['viagem_iniciada']) || (int)$viagem['viagem_iniciada'] === 0) {
                 http_response_code(422);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Embarque bloqueado: o motorista ainda não iniciou esta viagem.'
+                ]);
                 exit;
             }
 

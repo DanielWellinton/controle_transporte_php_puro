@@ -1,8 +1,9 @@
 <?php
-// Simulação ou obtenção dos dados do utilizador logado na sessão PHP nativa
-$nomeUsuario = $_SESSION['usuario_nome'] ?? 'Administrador';
-$emailUsuario = $_SESSION['usuario_email'] ?? 'admin@sistema.com';
-$iniciaisUsuario = strtoupper(substr($nomeUsuario, 0, 2));
+// Obtém os dados do usuário logado na sessão (array $_SESSION['usuario'] ou chaves diretas)
+$usuarioLogado = $_SESSION['usuario'] ?? [];
+$nomeUsuario = $usuarioLogado['nome'] ?? $_SESSION['usuario_nome'] ?? 'Administrador';
+$emailUsuario = $usuarioLogado['email'] ?? $_SESSION['usuario_email'] ?? 'admin@sistema.com';
+$iniciaisUsuario = strtoupper(mb_substr(trim($nomeUsuario), 0, 2, 'UTF-8'));
 $headerTitle = $headerTitle ?? 'Painel';
 ?>
 
